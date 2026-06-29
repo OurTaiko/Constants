@@ -103,25 +103,6 @@ def extract_intervals(branch_gaps):
                     intervals.append(g)
     return intervals
 
-
-def generate_bn_array(length: int) -> list:
-    """生成交替 1/2 的 bn 数组。"""
-    return [1 if i % 2 == 0 else 2 for i in range(length)]
-
-
-def build_bn(intervals, note_types=None):
-    """从 note_types 构建 bn 数组（长度 = len(intervals) + 1）。"""
-    target_len = len(intervals) + 1
-    if note_types and isinstance(note_types, list):
-        bn = [1 if v in (1, 3) else 2 for v in note_types if v in (1, 2, 3, 4)]
-        if len(bn) < target_len:
-            bn.extend(generate_bn_array(target_len - len(bn)))
-        elif len(bn) > target_len:
-            bn = bn[:target_len]
-        return bn
-    return generate_bn_array(target_len)
-
-
 def count_total_notes(branch_gaps, note_types=None):
     """统计谱面 judgeable note 总数。"""
     if isinstance(note_types, list):
@@ -144,8 +125,7 @@ def calc_roll_equivalent(intervals, note_types=None):
         return 0, [[], [], 0]
 
     an = intervals.copy()
-    bn = build_bn(intervals, note_types)
-    results = _roll.process(an, bn)
+    results = _roll.process(an, note_types)
 
     if not results:
         return 0, [[], [], 0]
@@ -194,8 +174,6 @@ def calculate_difficulty_ratings(branch_gaps, note_types=None):
     if not intervals:
         return ratings
 
-    bn = build_bn(intervals, note_types)
-
     # 体力
     try:
         _, _, ratings["stamina"] = _stamina.calculate_result(intervals)
@@ -204,7 +182,7 @@ def calculate_difficulty_ratings(branch_gaps, note_types=None):
 
     # 复合
     try:
-        ratings["complex"], ratings["complexRatio"] = _compound.calculate_complete_compound_difficulty(intervals, bn)
+        ratings["complex"], ratings["complexRatio"] = _compound.calculate_complete_compound_difficulty(intervals, note_types)
     except Exception:
         pass
 
@@ -330,11 +308,8 @@ def main():
     parser.add_argument("--unit", choices=["ms", "measures"], default="ms", help="间隔单位 (默认: ms)")
     parser.add_argument("--json", action="store_true", help="以 JSON 格式输出")
     parser.add_argument("--stdin", action="store_true", help="从标准输入读取 TJA 内容")
-    parser.add_argument("--api-url", help=f"覆盖 API 地址 (默认: {API_URL})")
 
     args = parser.parse_args()
-
-    api_url = args.api_url or API_URL
 
     try:
         # 读取 TJA 内容
@@ -352,7 +327,7 @@ def main():
             sys.exit(1)
 
         # 步骤 1: 调用 API 分析谱面
-        print(f"[请求 API: {api_url}]", file=sys.stderr)
+        print(f"[请求 API: {API_URL}]", file=sys.stderr)
         analysis = analyze_tja(tja_content, args.unit)
 
         # 步骤 2: 计算定数
@@ -374,7 +349,7 @@ def main():
         print(f"API HTTP {e.code}: {body}", file=sys.stderr)
         sys.exit(1)
     except urllib.error.URLError as e:
-        print(f"无法连接 API ({api_url}): {e.reason}", file=sys.stderr)
+        print(f"无法连接 API ({API_URL}): {e.reason}", file=sys.stderr)
         sys.exit(1)
     except Exception as e:
         print(f"错误: {e}", file=sys.stderr)
