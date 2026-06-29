@@ -3,7 +3,7 @@
 TJA 谱面分析模块
 ================
 
-封装 API 调用、数据提取、原始定数计算（8 个算法维度）。
+封装 API 调用、数据提取、原始定数计算。
 返回的 chart dict 可直接传入 rating.RatingPipeline 计算最终定数。
 
 用法:
@@ -41,9 +41,7 @@ if _ALGORITHMS_DIR not in sys.path:
 _stamina = importlib.import_module("\u4f53\u529b")            # 体力
 _compound = importlib.import_module("\u590d\u5408")           # 复合
 _rhythm = importlib.import_module("\u8282\u594f")             # 节奏
-_rhythm_overall = importlib.import_module("\u8282\u594f_\u6574\u4f53")  # 节奏_整体
 _speed = importlib.import_module("\u624b\u901f")              # 手速
-_speed95 = importlib.import_module("\u624b\u901f_95\u7ebf")   # 手速_95线
 _roll = importlib.import_module("\u6eda\u594f\u7b49\u6548")   # 滚奏等效
 _burst = importlib.import_module("\u7206\u53d1")              # 爆发
 
@@ -63,10 +61,9 @@ class TJAChartAnalyzer:
             "baseDifficulty": str,
             "isUra": bool,
             "branchType": str,    # "unbranched" / "normal" / "expert" / "master"
-            "ratings": {          # 8 个算法原始输出
+            "ratings": {          # 算法原始输出
                 "stamina", "speed", "burst", "complex", "complexRatio",
-                "rhythm", "rhythmRatio", "speed95", "rhythmOverall",
-                "rhythmRatioOverall", "rollEquivalent", "rollEquivalentOutputs",
+                "rhythm", "rhythmRatio", "rollEquivalent", "rollEquivalentOutputs",
                 "totalNotes"
             }
         }
@@ -198,10 +195,7 @@ class TJAChartAnalyzer:
             "complexRatio": 0.0,
             "rhythm": 0.0,
             "rhythmRatio": 0.0,
-            "rhythmOverall": 0.0,
-            "rhythmRatioOverall": 0.0,
             "speed": 0.0,
-            "speed95": 0.0,
             "rollEquivalent": 0.0,
             "rollEquivalentOutputs": [[], [], 0],
             "burst": 0.0,
@@ -225,7 +219,7 @@ class TJAChartAnalyzer:
         except Exception:
             pass
 
-        # 节奏 (分支版)
+        # 节奏
         try:
             ratings["rhythm"], ratings["rhythmRatio"] = (
                 _rhythm.compute_final_rhythm_difficulty(intervals)
@@ -233,23 +227,9 @@ class TJAChartAnalyzer:
         except Exception:
             pass
 
-        # 节奏 (整体版)
-        try:
-            ratings["rhythmOverall"], ratings["rhythmRatioOverall"] = (
-                _rhythm_overall.compute_final_rhythm_difficulty(intervals)
-            )
-        except Exception:
-            pass
-
-        # 手速 (75线)
+        # 手速
         try:
             ratings["speed"] = _speed.compute_weighted_average(intervals)
-        except Exception:
-            pass
-
-        # 手速95 (99线)
-        try:
-            ratings["speed95"] = _speed95.compute_weighted_average(intervals)
         except Exception:
             pass
 

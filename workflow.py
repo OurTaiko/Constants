@@ -155,8 +155,6 @@ def main():
                     lines.append(f"  爆发 (burst):      {r['burst']:>10.4f}")
                     lines.append(f"  复合 (complex):    {r['complex']:>10.4f}  (占比: {r['complexRatio']:.6f})")
                     lines.append(f"  节奏 (rhythm):     {r['rhythm']:>10.4f}  (占比: {r['rhythmRatio']:.6f})")
-                    lines.append(f"  手速95 (speed95):  {r['speed95']:>10.4f}")
-                    lines.append(f"  节奏整体 (rhythmO):{r['rhythmOverall']:>10.4f}  (占比: {r['rhythmRatioOverall']:.6f})")
                     lines.append(f"  滚奏等效 (rollEq): {r['rollEquivalent']:>10.4f}")
                 lines.append("\n" + "=" * 80)
                 print("\n".join(lines))
