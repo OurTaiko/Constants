@@ -4,7 +4,7 @@
 ====================================================
 
 第二阶段模块：将 tja_analysis 产出的原始算法值转换为最终 8 个输出字段。
-完整工作流请使用 workflow.py（自动串联第一阶段 + 第二阶段）。
+完整批量工作流请使用 batch_workflow.py（ese_mapping → 本地 tja → 最终定数）。
 
 用法:
     from tja_analysis import TJAChartAnalyzer
@@ -13,7 +13,13 @@
     analyzer = TJAChartAnalyzer()
     charts = analyzer.analyze_and_process(tja_content)
 
-    pipeline = RatingPipeline()
+    # 动态校准：从数据集自身推导 13 个全局参考值
+    datas = [ChartRawData.from_workflow_ratings(
+        c["course"], c["difficulty"], c.get("branchType", "unbranched"), c["ratings"]
+    ) for c in charts]
+    ref_values = RatingPipeline.calibrate(datas)
+
+    pipeline = RatingPipeline(ref_values)
     results = pipeline.compute_all(charts)
     for r in results:
         print(r.sub_constant_1, r.main_constant, r.sub_constant_2)
@@ -22,28 +28,13 @@
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Dict, List, Optional
 
 # ---------------------------------------------------------------------------
-# 参考值 — 从 rating.xlsx 全量数据集中提取的 MIN/MAX
-# 用于将各维度的换算值归一化到 [0, 15.5] 区间
+# 全局参考值（13 个 MIN/MAX）现全部由 RatingPipeline.calibrate() 从数据集动态推导，
+# 不再保留 rating.xlsx 的固定值。键名 = min_/max_ + workflow.md 中文名。
 # ---------------------------------------------------------------------------
-REF_VALUES: Dict[str, float] = {
-    "min_L": 0.0,
-    "max_L": 15.5,
-    "max_M": 15.5,
-    "max_N": 15.5,
-    "min_O": 0.027989,
-    "max_O": 15.623302,
-    "min_Q": 0.0,
-    "max_Q": 15.5,
-    "min_T": 0.034796,
-    "max_T": 15.547332,
-    "max_Z": 15.407059,
-    "max_AX": 15.167469,
-    "max_BO": 15.004055,
-}
 
 
 # ===========================================================================
@@ -53,9 +44,9 @@ REF_VALUES: Dict[str, float] = {
 
 @dataclass
 class ChartRawData:
-    """单个谱面的原始数据，来自 workflow.py 的算法输出。
+    """单个谱面的原始数据，来自 tja_analysis 的算法输出。
 
-    对应 rating.xlsx 中的 D-K 列（totalNotes + 7 个算法原始值）:
+    对应 workflow.md 的初始数据（totalNotes + 7 个算法原始值）:
         totalNotes, stamina, speed, burst, complex, complexRatio, rhythm, rhythmRatio
     """
 
@@ -83,7 +74,7 @@ class ChartRawData:
         branch_type: str,
         ratings: dict,
     ) -> "ChartRawData":
-        """从 workflow.py 的 calculate_difficulty_ratings 输出构造。"""
+        """从 tja_analysis 的 ratings 字典构造。"""
         return cls(
             course=course,
             difficulty=difficulty,
@@ -101,11 +92,11 @@ class ChartRawData:
 
 @dataclass
 class ChartConstantResult:
-    """最终 8 个输出字段，对应 rating.xlsx 的 DQ-DX 列。"""
+    """最终 8 个输出字段，对应 workflow.md 的最终定数。"""
 
-    sub_constant_1: float = 0.0  # 75定数
-    main_constant: float = 0.0  # 主定数
-    sub_constant_2: float = 0.0  # 99定数
+    sub_constant_1: float = 0.0  # 归一75定数
+    main_constant: float = 0.0  # 归一主定数
+    sub_constant_2: float = 0.0  # 最终99定数
     stamina: float = 0.0  # 体力 (0-15.5 归一化)
     handspeed: float = 0.0  # 手速 (0-15.5 归一化)
     burst: float = 0.0  # 爆发 (0-15.5 归一化)
@@ -148,28 +139,36 @@ class ChartConstantResult:
 
 
 class RatingPipeline:
-    """实现 rating.xlsx「拉表」的完整定数推导管线。
+    """实现 workflow.md「拉表」的完整定数推导管线。
 
     输入:  ChartRawData（原始算法值 + 总 note 数）
     输出:  ChartConstantResult（8 个最终字段）
+
+    内部变量名与 workflow.md 保持一致（体力换算、手速换算、粗糙主定数 等），
+    不使用列编号。
     """
 
-    def __init__(self, ref_values: Optional[Dict[str, float]] = None):
-        self.ref: Dict[str, float] = ref_values or REF_VALUES
+    def __init__(self, ref_values: Dict[str, float]):
+        """构造计算管线。
+
+        ref_values 必须由 RatingPipeline.calibrate() 从数据集动态推导得到，
+        不再提供固定默认值。
+        """
+        self.ref: Dict[str, float] = ref_values
 
     # ------------------------------------------------------------------
-    # Step 1: 原始值 → 换算值 (L-T 列)
+    # Step 1: 原始值 → 换算值（体力换算 ~ 节奏换算）
     # ------------------------------------------------------------------
 
     @staticmethod
     def _convert_stamina(raw: float) -> float:
-        """L: 体力换算 — sigmoid 映射到 [0, 15.5]"""
+        """体力换算 — sigmoid 映射到 [0, 15.5]"""
         val = 16.3783 / (1.0 + math.exp(-0.6764 * (raw - 7.2836))) - 0.6012
         return max(min(val, 15.5), 0.0)
 
     @staticmethod
     def _convert_speed(raw: float) -> float:
-        """M: 手速换算 — 分段函数"""
+        """手速换算 — 分段函数"""
         if raw < 5.0:
             return 3.0 * (raw / 5.0) ** (35.0 / 3.0)
         if raw < 6.0:
@@ -180,7 +179,7 @@ class RatingPipeline:
 
     @staticmethod
     def _convert_burst(raw: float) -> float:
-        """N: 爆发换算 — 分段函数"""
+        """爆发换算 — 分段函数"""
         threshold = 35.5 / 7.0  # ≈ 5.0714
         if raw < threshold:
             return (14.0 * raw / 71.0) ** (71.0 / 2.0)
@@ -194,37 +193,41 @@ class RatingPipeline:
 
     @staticmethod
     def _convert_complex_ratio(ratio: float) -> float:
-        """O: 复合占比换算 — tanh 映射"""
+        """复合占比换算 — tanh 映射"""
         return 18200.736 * math.tanh(4.491 * ratio + 3.86) - 18184.558
 
     @staticmethod
     def _complex_upper(total_notes: int) -> float:
-        """P: 复合上限 — 基于总 note 数的 sigmoid 上限"""
+        """复合上限 — 基于总 note 数的 sigmoid 上限"""
         return 17.7743 / (1.0 + math.exp(-0.0083 * total_notes + 2.8484)) - 0.9613
 
-    def _convert_complex(self, ratio_converted: float, upper: float) -> float:
-        """Q: 复合换算 — 归一化后取 min 与上限"""
-        r = self.ref
-        normalized = (ratio_converted - r["min_O"]) / (r["max_O"] - r["min_O"]) * 15.5
-        return min(normalized, upper)
+    def _convert_complex(self, 复合占比换算: float, 复合上限: float) -> float:
+        """复合换算 — 用全局复合占比换算的 MIN/MAX 归一后取 min 与上限"""
+        ref = self.ref
+        归一值 = (
+            (复合占比换算 - ref["min_复合占比换算"])
+            / (ref["max_复合占比换算"] - ref["min_复合占比换算"])
+            * 15.5
+        )
+        return min(归一值, 复合上限)
 
     @staticmethod
     def _convert_rhythm_ratio(ratio: float) -> float:
-        """R: 节奏占比换算 — sigmoid 映射"""
+        """节奏占比换算 — sigmoid 映射"""
         return 20.1353 / (1.0 + math.exp(-18.0625 * (ratio - 0.0692))) - 4.4496
 
     @staticmethod
     def _rhythm_upper(total_notes: int) -> float:
-        """S: 节奏上限 — 基于总 note 数的 sigmoid 上限"""
+        """节奏上限 — 基于总 note 数的 sigmoid 上限"""
         return 17.4097 / (1.0 + math.exp(-0.007 * total_notes + 2.7059)) - 1.0787
 
     @staticmethod
-    def _convert_rhythm(ratio_converted: float, upper: float) -> float:
-        """T: 节奏换算 — min(ratio, upper)"""
-        return min(ratio_converted, upper)
+    def _convert_rhythm(节奏占比换算: float, 节奏上限: float) -> float:
+        """节奏换算 — min(节奏占比换算, 节奏上限)"""
+        return min(节奏占比换算, 节奏上限)
 
     # ------------------------------------------------------------------
-    # Step 2: 归一化到 [0, 15.5] (U-Y 列)
+    # Step 2: 归一化到 [0, 15.5]（体力 ~ 节奏）
     # ------------------------------------------------------------------
 
     @staticmethod
@@ -234,226 +237,263 @@ class RatingPipeline:
         return (val - min_val) / (max_val - min_val) * 15.5
 
     # ------------------------------------------------------------------
-    # Step 3: 75定数 / sub_constant_1 (AA 列)
+    # Step 3: 75定数 / sub_constant_1（归一75定数）
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _calc_75_constant(U: float, V: float, X: float, max_Z: float) -> float:
-        Z = math.sqrt((U * U + V * V + X * X) / 3.0)
-        return 15.5 * Z / max_Z
+    def _calc_75_constant(
+        体力: float, 手速: float, 复合: float, max_粗糙75定数: float
+    ) -> float:
+        粗糙75定数 = math.sqrt((体力 * 体力 + 手速 * 手速 + 复合 * 复合) / 3.0)
+        return 15.5 * 粗糙75定数 / max_粗糙75定数
 
     # ------------------------------------------------------------------
-    # Step 4: 主定数 / main_constant (AY 列)
+    # Step 4a: 粗糙主定数（纯函数，供 calibrate 复用）
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _calc_raw_main_constant(
+        体力: float, 手速: float, 爆发: float, 复合: float, 节奏: float
+    ) -> float:
+        """粗糙主定数 — 加权 RMS，未做 13.3 软上限归一。"""
+        # 定数粗略值
+        最小维度 = min(体力, 手速, 爆发, 复合, 节奏)
+        平方和 = 体力 * 体力 + 手速 * 手速 + 爆发 * 爆发 + 复合 * 复合 + 节奏 * 节奏
+        定数粗略值 = math.sqrt((平方和 - 0.9 * 最小维度 * 最小维度) / 4.1)
+
+        # 比较值参数
+        平均Minus10 = 0.5 * math.tanh(1.0 * (定数粗略值 - 10.0)) + 0.5
+        体力Minus平均 = 0.5 * math.tanh(3.0 * (体力 - 定数粗略值 + 0.5)) + 0.5
+        体力Minus14_5 = 0.5 * math.tanh(3.0 * (体力 - 14.5)) + 0.5
+        爆发Minus平均 = 0.5 * math.tanh(3.0 * (爆发 - 定数粗略值 + 0.5)) + 0.5
+        复合Minus平均 = 0.5 * math.tanh(3.0 * (复合 - 定数粗略值 + 0.5)) + 0.5
+        节奏Minus平均 = 0.5 * math.tanh(3.0 * (节奏 - 定数粗略值 + 0.5)) + 0.5
+
+        # 条件判断
+        体力条件判断 = 平均Minus10 * 体力Minus平均 * (1.0 - 体力Minus14_5)
+        手速条件判断 = 平均Minus10
+        爆发条件判断 = 1.0 - 爆发Minus平均
+        复合条件判断 = 平均Minus10 * 复合Minus平均
+        节奏条件判断 = 平均Minus10 * 节奏Minus平均
+
+        # 主定数权重
+        if 最小维度 == 体力:
+            体力权重 = 0.1
+        else:
+            体力权重 = 0.7 * (1.0 - 体力条件判断) + 0.3
+        if 最小维度 == 手速:
+            手速权重 = 0.9 * 手速条件判断 + 0.1
+        else:
+            手速权重 = 1.0
+        if 最小维度 == 爆发:
+            爆发权重 = 0.1
+        else:
+            爆发权重 = 0.9 * 爆发条件判断 + 0.1
+        if 最小维度 == 复合:
+            复合权重 = 0.1
+        else:
+            复合权重 = 0.9 * (1.0 - 复合条件判断) + 0.1
+        if 最小维度 == 节奏:
+            节奏权重 = 0.1
+        else:
+            节奏权重 = 0.9 * (1.0 - 节奏条件判断) + 0.1
+
+        # 粗糙主定数：加权 RMS
+        平方 = [体力 * 体力, 手速 * 手速, 爆发 * 爆发, 复合 * 复合, 节奏 * 节奏]
+        权重 = [体力权重, 手速权重, 爆发权重, 复合权重, 节奏权重]
+        加权平方和 = sum(s * w for s, w in zip(平方, 权重))
+        权重和 = sum(权重)
+        return math.sqrt(加权平方和 / 权重和) if 权重和 > 0.0 else 0.0
+
+    # ------------------------------------------------------------------
+    # Step 4: 主定数 / main_constant（归一主定数）
     # ------------------------------------------------------------------
 
     def _calc_main_constant(
-        self, U: float, V: float, W: float, X: float, Y: float
+        self, 体力: float, 手速: float, 爆发: float, 复合: float, 节奏: float
     ) -> float:
-        r = self.ref
-
-        # AB: 粗略值
-        min_uvwxy = min(U, V, W, X, Y)
-        sum_sq = U * U + V * V + W * W + X * X + Y * Y
-        AB = math.sqrt((sum_sq - 0.9 * min_uvwxy * min_uvwxy) / 4.1)
-
-        # AH-AM: 条件因子
-        AH = 0.5 * math.tanh(1.0 * (AB - 10.0)) + 0.5
-        AI = 0.5 * math.tanh(3.0 * (U - AB + 0.5)) + 0.5
-        AJ = 0.5 * math.tanh(3.0 * (U - 14.5)) + 0.5
-        AK = 0.5 * math.tanh(3.0 * (W - AB + 0.5)) + 0.5
-        AL = 0.5 * math.tanh(3.0 * (X - AB + 0.5)) + 0.5
-        AM = 0.5 * math.tanh(3.0 * (Y - AB + 0.5)) + 0.5
-
-        # AN-AR: 条件判断
-        AN = AH * AI * (1.0 - AJ)
-        AO = AH
-        AP = 1.0 - AK
-        AQ = AH * AL
-        AR = AH * AM
-
-        # AC-AG: 主定数权重
-        if min_uvwxy == U:
-            AC = 0.1
-        else:
-            AC = 0.7 * (1.0 - AN) + 0.3
-
-        if min_uvwxy == V:
-            AD = 0.9 * AO + 0.1
-        else:
-            AD = 1.0
-
-        if min_uvwxy == W:
-            AE = 0.1
-        else:
-            AE = 0.9 * AP + 0.1
-
-        if min_uvwxy == X:
-            AF = 0.1
-        else:
-            AF = 0.9 * (1.0 - AQ) + 0.1
-
-        if min_uvwxy == Y:
-            AG = 0.1
-        else:
-            AG = 0.9 * (1.0 - AR) + 0.1
-
-        # AX: 加权 RMS
-        squared = [U * U, V * V, W * W, X * X, Y * Y]
-        weights = [AC, AD, AE, AF, AG]
-        sum_product = sum(s * w for s, w in zip(squared, weights))
-        sum_weights = sum(weights)
-        AX = (
-            math.sqrt(sum_product / sum_weights) if sum_weights > 0.0 else 0.0
-        )
-
-        # AY: 13.3 软上限
-        if AX > 13.3:
-            return 13.3 + (15.5 - 13.3) * (AX - 13.3) / (r["max_AX"] - 13.3)
-        return AX
+        ref = self.ref
+        粗糙主定数 = self._calc_raw_main_constant(体力, 手速, 爆发, 复合, 节奏)
+        # 归一主定数：13.3 软上限
+        if 粗糙主定数 > 13.3:
+            return (
+                13.3
+                + (15.5 - 13.3) * (粗糙主定数 - 13.3) / (ref["max_粗糙主定数"] - 13.3)
+            )
+        return 粗糙主定数
 
     # ------------------------------------------------------------------
-    # Step 5: 99定数 / sub_constant_2 (BR 列)
+    # Step 5a: 粗糙99定数（纯函数，供 calibrate 复用）
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _calc_raw_99_constant(
+        体力: float,
+        手速: float,
+        爆发: float,
+        复合: float,
+        节奏: float,
+        归一主定数: float,
+    ) -> float:
+        """粗糙99定数 — 加权 RMS，未做 13.3 软上限归一。"""
+        # 主定数范围
+        if 归一主定数 > 14.5:
+            主定数范围 = 1
+        elif 归一主定数 > 13.5:
+            主定数范围 = 2
+        elif 归一主定数 > 12.5:
+            主定数范围 = 3
+        elif 归一主定数 > 11.5:
+            主定数范围 = 4
+        elif 归一主定数 > 9.5:
+            主定数范围 = 5
+        else:
+            主定数范围 = 6
+
+        # 主定数权重（独立重算以避免与主定数方法耦合）
+        平方和 = 体力 * 体力 + 手速 * 手速 + 爆发 * 爆发 + 复合 * 复合 + 节奏 * 节奏
+        最小维度 = min(体力, 手速, 爆发, 复合, 节奏)
+        定数粗略值 = math.sqrt((平方和 - 0.9 * 最小维度 * 最小维度) / 4.1)
+
+        平均Minus10 = 0.5 * math.tanh(1.0 * (定数粗略值 - 10.0)) + 0.5
+        体力Minus平均 = 0.5 * math.tanh(3.0 * (体力 - 定数粗略值 + 0.5)) + 0.5
+        体力Minus14_5 = 0.5 * math.tanh(3.0 * (体力 - 14.5)) + 0.5
+        爆发Minus平均 = 0.5 * math.tanh(3.0 * (爆发 - 定数粗略值 + 0.5)) + 0.5
+        复合Minus平均 = 0.5 * math.tanh(3.0 * (复合 - 定数粗略值 + 0.5)) + 0.5
+        节奏Minus平均 = 0.5 * math.tanh(3.0 * (节奏 - 定数粗略值 + 0.5)) + 0.5
+
+        体力条件判断 = 平均Minus10 * 体力Minus平均 * (1.0 - 体力Minus14_5)
+        手速条件判断 = 平均Minus10
+        爆发条件判断 = 1.0 - 爆发Minus平均
+        复合条件判断 = 平均Minus10 * 复合Minus平均
+        节奏条件判断 = 平均Minus10 * 节奏Minus平均
+
+        if 最小维度 == 体力:
+            体力权重 = 0.1
+        else:
+            体力权重 = 0.7 * (1.0 - 体力条件判断) + 0.3
+        if 最小维度 == 手速:
+            手速权重 = 0.9 * 手速条件判断 + 0.1
+        else:
+            手速权重 = 1.0
+        if 最小维度 == 爆发:
+            爆发权重 = 0.1
+        else:
+            爆发权重 = 0.9 * 爆发条件判断 + 0.1
+        if 最小维度 == 复合:
+            复合权重 = 0.1
+        else:
+            复合权重 = 0.9 * (1.0 - 复合条件判断) + 0.1
+        if 最小维度 == 节奏:
+            节奏权重 = 0.1
+        else:
+            节奏权重 = 0.9 * (1.0 - 节奏条件判断) + 0.1
+
+        # 99定数比较值参数
+        体力Minus14 = 0.5 * math.tanh(3.0 * (体力 - 14.0)) + 0.5
+        体力Minus13_5 = 0.5 * math.tanh(3.0 * (体力 - 13.5)) + 0.5
+        手速Minus11 = 0.5 * math.tanh(3.0 * (手速 - 11.0)) + 0.5
+        爆发Minus15 = 0.5 * math.tanh(3.0 * (爆发 - 15.0)) + 0.5
+        爆发Minus8_5 = 0.5 * math.tanh(3.0 * (爆发 - 8.5)) + 0.5
+        节奏Minus主定数 = 0.5 * math.tanh(3.0 * (节奏 - 归一主定数)) + 0.5
+
+        # 99定数权重
+        if 主定数范围 == 3:
+            体力99定数权重 = 1.0 * 体力Minus14 + 体力权重 * (1.0 - 体力Minus14)
+        elif 主定数范围 == 4:
+            体力99定数权重 = 1.0 * 体力Minus13_5 + 体力权重 * (1.0 - 体力Minus13_5)
+        elif 主定数范围 in (5, 6):
+            体力99定数权重 = 0.1
+        else:
+            体力99定数权重 = 体力权重
+
+        if 主定数范围 == 5:
+            手速99定数权重 = 0.5 * 手速Minus11 + 0.5
+        elif 主定数范围 == 6:
+            手速99定数权重 = 0.9 * 手速Minus11 + 0.1
+        else:
+            手速99定数权重 = 手速权重
+
+        if 主定数范围 == 1:
+            爆发99定数权重 = 1.0
+        elif 主定数范围 == 2:
+            爆发99定数权重 = 0.5
+        elif 主定数范围 == 3:
+            爆发99定数权重 = 0.5 * 爆发Minus15 + 爆发权重 * (1.0 - 爆发Minus15)
+        elif 主定数范围 == 4:
+            爆发99定数权重 = 0.5
+        elif 主定数范围 == 5:
+            爆发99定数权重 = 0.3 * 爆发Minus8_5 + 0.5
+        elif 主定数范围 == 6:
+            爆发99定数权重 = 0.9 * 爆发Minus8_5 + 0.1
+        else:
+            爆发99定数权重 = 爆发权重
+
+        if 主定数范围 in (1, 2):
+            复合99定数权重 = 复合权重
+        else:
+            复合99定数权重 = 0.1
+
+        if 主定数范围 == 1:
+            节奏99定数权重 = 0.3
+        elif 主定数范围 == 2:
+            节奏99定数权重 = 0.5
+        elif 主定数范围 == 3:
+            节奏99定数权重 = 0.5
+        elif 主定数范围 == 4:
+            节奏99定数权重 = 0.8
+        elif 主定数范围 == 5:
+            节奏99定数权重 = 0.5 * 节奏Minus主定数 + 0.3
+        elif 主定数范围 == 6:
+            节奏99定数权重 = 1.0
+        else:
+            节奏99定数权重 = 节奏权重
+
+        # 粗糙99定数：加权 RMS
+        平方 = [体力 * 体力, 手速 * 手速, 爆发 * 爆发, 复合 * 复合, 节奏 * 节奏]
+        权重 = [
+            体力99定数权重,
+            手速99定数权重,
+            爆发99定数权重,
+            复合99定数权重,
+            节奏99定数权重,
+        ]
+        加权平方和 = sum(s * w for s, w in zip(平方, 权重))
+        权重和 = sum(权重)
+        return math.sqrt(加权平方和 / 权重和) if 权重和 > 0.0 else 0.0
+
+    # ------------------------------------------------------------------
+    # Step 5: 99定数 / sub_constant_2（最终99定数）
     # ------------------------------------------------------------------
 
     def _calc_99_constant(
-        self, U: float, V: float, W: float, X: float, Y: float, AY: float
+        self,
+        体力: float,
+        手速: float,
+        爆发: float,
+        复合: float,
+        节奏: float,
+        归一主定数: float,
     ) -> float:
-        r = self.ref
-
-        # CN: 主定数范围
-        if AY > 14.5:
-            CN = 1
-        elif AY > 13.5:
-            CN = 2
-        elif AY > 12.5:
-            CN = 3
-        elif AY > 11.5:
-            CN = 4
-        elif AY > 9.5:
-            CN = 5
-        else:
-            CN = 6
-
-        # 先算出主定数权重 AC-AF（简化：仅计算 99 定数需要的最小集合）
-        # --- 这些值在 _calc_main_constant 中已算过，此处独立重算以避免耦合 ---
-        sum_sq_all = U * U + V * V + W * W + X * X + Y * Y
-        min_uvwxy = min(U, V, W, X, Y)
-        AB = math.sqrt((sum_sq_all - 0.9 * min_uvwxy * min_uvwxy) / 4.1)
-
-        AH = 0.5 * math.tanh(1.0 * (AB - 10.0)) + 0.5
-        AI = 0.5 * math.tanh(3.0 * (U - AB + 0.5)) + 0.5
-        AJ = 0.5 * math.tanh(3.0 * (U - 14.5)) + 0.5
-        AK = 0.5 * math.tanh(3.0 * (W - AB + 0.5)) + 0.5
-        AL = 0.5 * math.tanh(3.0 * (X - AB + 0.5)) + 0.5
-        AM = 0.5 * math.tanh(3.0 * (Y - AB + 0.5)) + 0.5
-
-        AN = AH * AI * (1.0 - AJ)
-        AO = AH
-        AP = 1.0 - AK
-        AQ = AH * AL
-        AR = AH * AM
-
-        if min_uvwxy == U:
-            AC = 0.1
-        else:
-            AC = 0.7 * (1.0 - AN) + 0.3
-        if min_uvwxy == V:
-            AD = 0.9 * AO + 0.1
-        else:
-            AD = 1.0
-        if min_uvwxy == W:
-            AE = 0.1
-        else:
-            AE = 0.9 * AP + 0.1
-        if min_uvwxy == X:
-            AF = 0.1
-        else:
-            AF = 0.9 * (1.0 - AQ) + 0.1
-        if min_uvwxy == Y:
-            AG = 0.1
-        else:
-            AG = 0.9 * (1.0 - AR) + 0.1
-
-        # CO-CT: 99定数条件因子
-        CO = 0.5 * math.tanh(3.0 * (U - 14.0)) + 0.5
-        CP = 0.5 * math.tanh(3.0 * (U - 13.5)) + 0.5
-        CQ_val = 0.5 * math.tanh(3.0 * (V - 11.0)) + 0.5
-        CR = 0.5 * math.tanh(3.0 * (W - 15.0)) + 0.5
-        CS = 0.5 * math.tanh(3.0 * (W - 8.5)) + 0.5
-        CT = 0.5 * math.tanh(3.0 * (Y - AY)) + 0.5
-
-        # BE-BI: 99定数权重
-        if CN == 3:
-            BE = 1.0 * CO + AC * (1.0 - CO)
-        elif CN == 4:
-            BE = 1.0 * CP + AC * (1.0 - CP)
-        elif CN in (5, 6):
-            BE = 0.1
-        else:
-            BE = AC
-
-        if CN == 5:
-            BF = 0.5 * CQ_val + 0.5
-        elif CN == 6:
-            BF = 0.9 * CQ_val + 0.1
-        else:
-            BF = AD
-
-        if CN == 1:
-            BG = 1.0
-        elif CN == 2:
-            BG = 0.5
-        elif CN == 3:
-            BG = 0.5 * CR + AE * (1.0 - CR)
-        elif CN == 4:
-            BG = 0.5
-        elif CN == 5:
-            BG = 0.3 * CS + 0.5
-        elif CN == 6:
-            BG = 0.9 * CS + 0.1
-        else:
-            BG = AE
-
-        if CN in (1, 2):
-            BH = AF
-        else:
-            BH = 0.1
-
-        if CN == 1:
-            BI = 0.3
-        elif CN == 2:
-            BI = 0.5
-        elif CN == 3:
-            BI = 0.5
-        elif CN == 4:
-            BI = 0.8
-        elif CN == 5:
-            BI = 0.5 * CT + 0.3
-        elif CN == 6:
-            BI = 1.0
-        else:
-            BI = AG
-
-        # BO: 加权 RMS (99定数)
-        squared = [U * U, V * V, W * W, X * X, Y * Y]
-        weights = [BE, BF, BG, BH, BI]
-        sum_product = sum(s * w for s, w in zip(squared, weights))
-        sum_weights = sum(weights)
-        BO_val = (
-            math.sqrt(sum_product / sum_weights) if sum_weights > 0.0 else 0.0
+        ref = self.ref
+        粗糙99定数 = self._calc_raw_99_constant(
+            体力, 手速, 爆发, 复合, 节奏, 归一主定数
         )
 
-        # BP: 13.3 软上限
-        if BO_val > 13.3:
-            BP = 13.3 + (15.5 - 13.3) * (BO_val - 13.3) / (r["max_BO"] - 13.3)
+        # 归一99定数：13.3 软上限
+        if 粗糙99定数 > 13.3:
+            归一99定数 = (
+                13.3
+                + (15.5 - 13.3) * (粗糙99定数 - 13.3) / (ref["max_粗糙99定数"] - 13.3)
+            )
         else:
-            BP = BO_val
+            归一99定数 = 粗糙99定数
 
-        # BQ: 手速限制
-        BQ_val = 1.0 / 8.0 * V * V + 10.0
+        # 手速限制
+        手速限制 = 1.0 / 8.0 * 手速 * 手速 + 10.0
 
-        # BR: 取 min
-        return min(BP, BQ_val)
+        # 最终99定数：取 min
+        return min(归一99定数, 手速限制)
 
     # ------------------------------------------------------------------
     # 主入口
@@ -461,49 +501,49 @@ class RatingPipeline:
 
     def compute(self, data: ChartRawData) -> ChartConstantResult:
         """从原始算法值计算 8 个最终输出字段。"""
-        r = self.ref
+        ref = self.ref
 
         # Step 1: 原始值 → 换算值
-        L = self._convert_stamina(data.stamina_raw)
-        M = self._convert_speed(data.speed_raw)
-        N = self._convert_burst(data.burst_raw)
-        O = self._convert_complex_ratio(data.complex_ratio)
-        P = self._complex_upper(data.total_notes)
-        Q = self._convert_complex(O, P)
-        R = self._convert_rhythm_ratio(data.rhythm_ratio)
-        S = self._rhythm_upper(data.total_notes)
-        T = self._convert_rhythm(R, S)
+        体力换算 = self._convert_stamina(data.stamina_raw)
+        手速换算 = self._convert_speed(data.speed_raw)
+        爆发换算 = self._convert_burst(data.burst_raw)
+        复合占比换算 = self._convert_complex_ratio(data.complex_ratio)
+        复合上限 = self._complex_upper(data.total_notes)
+        复合换算 = self._convert_complex(复合占比换算, 复合上限)
+        节奏占比换算 = self._convert_rhythm_ratio(data.rhythm_ratio)
+        节奏上限 = self._rhythm_upper(data.total_notes)
+        节奏换算 = self._convert_rhythm(节奏占比换算, 节奏上限)
 
         # Step 2: 归一化 [0, 15.5]
-        U = self._normalize(L, r["min_L"], r["max_L"])
-        V = self._normalize(M, 0.0, r["max_M"])
-        W = self._normalize(N, 0.0, r["max_N"])
-        X = self._normalize(Q, r["min_Q"], r["max_Q"])
-        Y = self._normalize(T, r["min_T"], r["max_T"])
+        体力 = self._normalize(体力换算, ref["min_体力换算"], ref["max_体力换算"])
+        手速 = self._normalize(手速换算, 0.0, ref["max_手速换算"])
+        爆发 = self._normalize(爆发换算, 0.0, ref["max_爆发换算"])
+        复合 = self._normalize(复合换算, ref["min_复合换算"], ref["max_复合换算"])
+        节奏 = self._normalize(节奏换算, ref["min_节奏换算"], ref["max_节奏换算"])
 
         # Step 3: 75定数 (sub_constant_1)
-        sub1 = self._calc_75_constant(U, V, X, r["max_Z"])
+        sub1 = self._calc_75_constant(体力, 手速, 复合, ref["max_粗糙75定数"])
 
         # Step 4: 主定数 (main_constant)
-        main_c = self._calc_main_constant(U, V, W, X, Y)
+        主定数 = self._calc_main_constant(体力, 手速, 爆发, 复合, 节奏)
 
         # Step 5: 99定数 (sub_constant_2)
-        sub2 = self._calc_99_constant(U, V, W, X, Y, main_c)
+        sub2 = self._calc_99_constant(体力, 手速, 爆发, 复合, 节奏, 主定数)
 
         return ChartConstantResult(
             sub_constant_1=sub1,
-            main_constant=main_c,
+            main_constant=主定数,
             sub_constant_2=sub2,
-            stamina=U,
-            handspeed=V,
-            burst=W,
-            complex=X,
-            rhythm=Y,
+            stamina=体力,
+            handspeed=手速,
+            burst=爆发,
+            complex=复合,
+            rhythm=节奏,
             source=data,
         )
 
     def compute_from_chart(self, chart: dict) -> ChartConstantResult:
-        """从 workflow.py process_analysis 输出的 chart dict 直接计算。"""
+        """从 tja_analysis process() 输出的 chart dict 直接计算。"""
         r = chart.get("ratings", {})
         data = ChartRawData.from_workflow_ratings(
             course=chart.get("course", ""),
@@ -517,6 +557,121 @@ class RatingPipeline:
         """批量计算多个谱面。"""
         return [self.compute_from_chart(c) for c in charts]
 
+    # ------------------------------------------------------------------
+    # 动态校准 — 从全量数据集计算 13 个全局参考值
+    # ------------------------------------------------------------------
+
+    @classmethod
+    def calibrate(cls, all_data: List[ChartRawData]) -> Dict[str, float]:
+        """从全量数据集自身计算 13 个全局 MIN/MAX 参考值。
+
+        忠实于 workflow.md 的「所有乐曲」语义：归一化所需的全局极值
+        均由本次输入数据集推导（全动态，不依赖任何固定值）。
+
+        按 workflow.md 的依赖层级分阶段计算：
+          A 每谱: 体力换算,手速换算,爆发换算,复合占比换算,复合上限,节奏占比换算,节奏上限
+          B 全局: min_复合占比换算, max_复合占比换算
+          C 每谱: 复合换算=min((复合占比换算-min)/(max-min)*15.5, 复合上限);  节奏换算=min(节奏占比换算, 节奏上限)
+          D 全局: min/max_体力换算, max_手速换算, max_爆发换算, min/max_复合换算, min/max_节奏换算
+          E 每谱: 体力,手速,爆发,复合,节奏 (归一化，使用本阶段刚算出的全局极值)
+          F 每谱: 粗糙75定数=sqrt((体力²+手速²+复合²)/3);  粗糙主定数=_calc_raw_main_constant
+          G 全局: max_粗糙75定数, max_粗糙主定数
+          H 每谱: 归一主定数 (13.3 软上限，用 max_粗糙主定数)
+          I 每谱: 粗糙99定数=_calc_raw_99_constant(..., 归一主定数)
+          J 全局: max_粗糙99定数
+        """
+        if not all_data:
+            raise ValueError("calibrate 需要非空数据集")
+
+        n = len(all_data)
+
+        # Stage A: 每谱换算值
+        体力换算 = [cls._convert_stamina(d.stamina_raw) for d in all_data]
+        手速换算 = [cls._convert_speed(d.speed_raw) for d in all_data]
+        爆发换算 = [cls._convert_burst(d.burst_raw) for d in all_data]
+        复合占比换算 = [cls._convert_complex_ratio(d.complex_ratio) for d in all_data]
+        复合上限 = [cls._complex_upper(d.total_notes) for d in all_data]
+        节奏占比换算 = [cls._convert_rhythm_ratio(d.rhythm_ratio) for d in all_data]
+        节奏上限 = [cls._rhythm_upper(d.total_notes) for d in all_data]
+
+        # Stage B: 复合占比换算的全局极值
+        min_复合占比换算 = min(复合占比换算)
+        max_复合占比换算 = max(复合占比换算)
+
+        # Stage C: 复合换算（用本地极值）与 节奏换算（纯函数）
+        占比换算跨度 = max_复合占比换算 - min_复合占比换算
+        复合换算 = [
+            min(
+                (复合占比换算[i] - min_复合占比换算) / 占比换算跨度 * 15.5, 复合上限[i]
+            )
+            if 占比换算跨度 > 0
+            else 0.0
+            for i in range(n)
+        ]
+        节奏换算 = [cls._convert_rhythm(节奏占比换算[i], 节奏上限[i]) for i in range(n)]
+
+        # Stage D: 归一化所需全局极值
+        min_体力换算, max_体力换算 = min(体力换算), max(体力换算)
+        max_手速换算 = max(手速换算)
+        max_爆发换算 = max(爆发换算)
+        min_复合换算, max_复合换算 = min(复合换算), max(复合换算)
+        min_节奏换算, max_节奏换算 = min(节奏换算), max(节奏换算)
+
+        # Stage E: 各维度归一化 [0, 15.5]
+        体力 = [cls._normalize(体力换算[i], min_体力换算, max_体力换算) for i in range(n)]
+        手速 = [cls._normalize(手速换算[i], 0.0, max_手速换算) for i in range(n)]
+        爆发 = [cls._normalize(爆发换算[i], 0.0, max_爆发换算) for i in range(n)]
+        复合 = [cls._normalize(复合换算[i], min_复合换算, max_复合换算) for i in range(n)]
+        节奏 = [cls._normalize(节奏换算[i], min_节奏换算, max_节奏换算) for i in range(n)]
+
+        # Stage F: 粗糙75定数 与 粗糙主定数
+        粗糙75定数 = [
+            math.sqrt((体力[i] * 体力[i] + 手速[i] * 手速[i] + 复合[i] * 复合[i]) / 3.0)
+            for i in range(n)
+        ]
+        粗糙主定数 = [
+            cls._calc_raw_main_constant(体力[i], 手速[i], 爆发[i], 复合[i], 节奏[i])
+            for i in range(n)
+        ]
+
+        # Stage G: 75定数/主定数的归一分母
+        max_粗糙75定数 = max(粗糙75定数)
+        max_粗糙主定数 = max(粗糙主定数)
+
+        # Stage H: 归一主定数（每谱，依赖 max_粗糙主定数）
+        主定数跨度 = max_粗糙主定数 - 13.3
+        归一主定数 = []
+        for 粗糙 in 粗糙主定数:
+            if 粗糙 > 13.3 and 主定数跨度 > 0:
+                归一主定数.append(13.3 + (15.5 - 13.3) * (粗糙 - 13.3) / 主定数跨度)
+            else:
+                归一主定数.append(粗糙)
+
+        # Stage I/J: 粗糙99定数 及其全局最大值
+        粗糙99定数 = [
+            cls._calc_raw_99_constant(
+                体力[i], 手速[i], 爆发[i], 复合[i], 节奏[i], 归一主定数[i]
+            )
+            for i in range(n)
+        ]
+        max_粗糙99定数 = max(粗糙99定数)
+
+        return {
+            "min_体力换算": min_体力换算,
+            "max_体力换算": max_体力换算,
+            "max_手速换算": max_手速换算,
+            "max_爆发换算": max_爆发换算,
+            "min_复合占比换算": min_复合占比换算,
+            "max_复合占比换算": max_复合占比换算,
+            "min_复合换算": min_复合换算,
+            "max_复合换算": max_复合换算,
+            "min_节奏换算": min_节奏换算,
+            "max_节奏换算": max_节奏换算,
+            "max_粗糙75定数": max_粗糙75定数,
+            "max_粗糙主定数": max_粗糙主定数,
+            "max_粗糙99定数": max_粗糙99定数,
+        }
+
 
 # ===========================================================================
 # CLI
@@ -528,9 +683,9 @@ def main():
     import sys
 
     parser = argparse.ArgumentParser(
-        description="定数计算管线 — 将 workflow.py 输出转换为最终定数",
+        description="定数计算管线 — 将 tja_analysis 输出转换为最终定数",
     )
-    parser.add_argument("file", nargs="?", help="workflow.py 的 JSON 输出文件（默认 stdin）")
+    parser.add_argument("file", nargs="?", help="charts JSON 文件（默认 stdin）")
     parser.add_argument("--json", action="store_true", default=True, help="JSON 输出 (默认)")
     args = parser.parse_args()
 
@@ -540,7 +695,19 @@ def main():
     else:
         charts_data = json.load(sys.stdin)
 
-    pipeline = RatingPipeline()
+    # 动态校准：从输入数据集自身推导全局参考值
+    datas = [
+        ChartRawData.from_workflow_ratings(
+            course=c.get("course", ""),
+            difficulty=c.get("difficulty", ""),
+            branch_type=c.get("branchType", "unbranched"),
+            ratings=c.get("ratings", {}),
+        )
+        for c in charts_data
+    ]
+    ref_values = RatingPipeline.calibrate(datas)
+
+    pipeline = RatingPipeline(ref_values)
     results = pipeline.compute_all(charts_data)
 
     output = []

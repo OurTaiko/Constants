@@ -2,3 +2,6 @@ __pycache__
 .claude/
 .vscode/
 .venv/
+.cache/
+constants.json
+*.log
