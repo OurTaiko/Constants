@@ -46,7 +46,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from rating import ChartRawData, RatingPipeline
-from tja_analysis import TJAChartAnalyzer
+from tja_analysis import Chart, TJAChartAnalyzer
 
 # ---------------------------------------------------------------------------
 # 默认配置
@@ -181,13 +181,13 @@ def process_song(
 # ===========================================================================
 
 
-def build_chart_entry(chart: dict, result) -> dict:
+def build_chart_entry(chart: Chart, result) -> dict:
     """组装单条谱面的输出（元信息 + 最终 8 字段 + 原始六维）。"""
-    ratings = chart.get("ratings", {})
+    ratings = chart.ratings
     return {
-        "course": chart.get("course", ""),
-        "difficulty": chart.get("difficulty", ""),
-        "branchType": chart.get("branchType", ""),
+        "course": chart.course,
+        "difficulty": chart.difficulty,
+        "branchType": chart.branch_type,
         "sub_constant_1": result.sub_constant_1,
         "main_constant": result.main_constant,
         "sub_constant_2": result.sub_constant_2,
@@ -196,15 +196,15 @@ def build_chart_entry(chart: dict, result) -> dict:
         "burst": result.burst,
         "complex": result.complex,
         "rhythm": result.rhythm,
-        "totalNotes": ratings.get("totalNotes", 0),
+        "totalNotes": ratings.total_notes,
         "raw": {
-            "stamina": ratings.get("stamina", 0.0),
-            "speed": ratings.get("speed", 0.0),
-            "burst": ratings.get("burst", 0.0),
-            "complex": ratings.get("complex", 0.0),
-            "complexRatio": ratings.get("complexRatio", 0.0),
-            "rhythm": ratings.get("rhythm", 0.0),
-            "rhythmRatio": ratings.get("rhythmRatio", 0.0),
+            "stamina": ratings.stamina,
+            "speed": ratings.speed,
+            "burst": ratings.burst,
+            "complex": ratings.complex,
+            "complexRatio": ratings.complex_ratio,
+            "rhythm": ratings.rhythm,
+            "rhythmRatio": ratings.rhythm_ratio,
         },
     }
 
@@ -279,7 +279,7 @@ def main() -> int:
                 print(tag, file=sys.stderr)
 
     # ---- 收集成功的谱面，按原始顺序展开 ----
-    flat: List[Tuple[str, dict]] = []  # (song_id, chart)
+    flat: List[Tuple[str, Chart]] = []  # (song_id, chart)
     errors: List[dict] = []
     for song_id, relative in items:
         res = results_by_id.get(song_id)
@@ -306,15 +306,7 @@ def main() -> int:
         return 1
 
     # ---- 阶段二：动态校准 + 最终定数 ----
-    all_data = [
-        ChartRawData.from_workflow_ratings(
-            course=chart.get("course", ""),
-            difficulty=chart.get("difficulty", ""),
-            branch_type=chart.get("branchType", "unbranched"),
-            ratings=chart.get("ratings", {}),
-        )
-        for _, chart in flat
-    ]
+    all_data = [ChartRawData.from_chart(chart) for _, chart in flat]
     print("[动态校准全局参考值...]", file=sys.stderr)
     ref_values = RatingPipeline.calibrate(all_data)
 
@@ -322,7 +314,7 @@ def main() -> int:
     all_results = pipeline.compute_all([chart for _, chart in flat])
 
     # 按歌聚合结果
-    charts_by_song: Dict[str, List[Tuple[dict, object]]] = defaultdict(list)
+    charts_by_song: Dict[str, List[Tuple[Chart, object]]] = defaultdict(list)
     for (song_id, chart), result in zip(flat, all_results):
         charts_by_song[song_id].append((chart, result))
 

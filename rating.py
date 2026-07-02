@@ -8,15 +8,13 @@
 
 用法:
     from tja_analysis import TJAChartAnalyzer
-    from rating import RatingPipeline
+    from rating import ChartRawData, RatingPipeline
 
     analyzer = TJAChartAnalyzer()
     charts = analyzer.analyze_and_process(tja_content)
 
     # 动态校准：从数据集自身推导 13 个全局参考值
-    datas = [ChartRawData.from_workflow_ratings(
-        c["course"], c["difficulty"], c.get("branchType", "unbranched"), c["ratings"]
-    ) for c in charts]
+    datas = [ChartRawData.from_chart(c) for c in charts]
     ref_values = RatingPipeline.calibrate(datas)
 
     pipeline = RatingPipeline(ref_values)
@@ -30,6 +28,8 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 from typing import Dict, List, Optional
+
+from tja_analysis import Chart, ChartRatings
 
 # ---------------------------------------------------------------------------
 # 全局参考值（13 个 MIN/MAX）现全部由 RatingPipeline.calibrate() 从数据集动态推导，
@@ -72,21 +72,31 @@ class ChartRawData:
         course: str,
         difficulty: str,
         branch_type: str,
-        ratings: dict,
+        ratings: ChartRatings,
     ) -> "ChartRawData":
-        """从 tja_analysis 的 ratings 字典构造。"""
+        """从 tja_analysis 的 ChartRatings 构造。"""
         return cls(
             course=course,
             difficulty=difficulty,
             branch_type=branch_type,
-            total_notes=ratings.get("totalNotes", 0),
-            stamina_raw=ratings.get("stamina", 0.0),
-            speed_raw=ratings.get("speed", 0.0),
-            burst_raw=ratings.get("burst", 0.0),
-            complex_raw=ratings.get("complex", 0.0),
-            complex_ratio=ratings.get("complexRatio", 0.0),
-            rhythm_raw=ratings.get("rhythm", 0.0),
-            rhythm_ratio=ratings.get("rhythmRatio", 0.0),
+            total_notes=ratings.total_notes,
+            stamina_raw=ratings.stamina,
+            speed_raw=ratings.speed,
+            burst_raw=ratings.burst,
+            complex_raw=ratings.complex,
+            complex_ratio=ratings.complex_ratio,
+            rhythm_raw=ratings.rhythm,
+            rhythm_ratio=ratings.rhythm_ratio,
+        )
+
+    @classmethod
+    def from_chart(cls, chart: Chart) -> "ChartRawData":
+        """从 tja_analysis 的 Chart 对象构造。"""
+        return cls.from_workflow_ratings(
+            course=chart.course,
+            difficulty=chart.difficulty,
+            branch_type=chart.branch_type,
+            ratings=chart.ratings,
         )
 
 
@@ -542,18 +552,11 @@ class RatingPipeline:
             source=data,
         )
 
-    def compute_from_chart(self, chart: dict) -> ChartConstantResult:
-        """从 tja_analysis process() 输出的 chart dict 直接计算。"""
-        r = chart.get("ratings", {})
-        data = ChartRawData.from_workflow_ratings(
-            course=chart.get("course", ""),
-            difficulty=chart.get("difficulty", ""),
-            branch_type=chart.get("branchType", "unbranched"),
-            ratings=r,
-        )
-        return self.compute(data)
+    def compute_from_chart(self, chart: Chart) -> ChartConstantResult:
+        """从 tja_analysis process() 输出的 Chart 对象直接计算。"""
+        return self.compute(ChartRawData.from_chart(chart))
 
-    def compute_all(self, charts: List[dict]) -> List[ChartConstantResult]:
+    def compute_all(self, charts: List[Chart]) -> List[ChartConstantResult]:
         """批量计算多个谱面。"""
         return [self.compute_from_chart(c) for c in charts]
 
@@ -696,27 +699,20 @@ def main():
         charts_data = json.load(sys.stdin)
 
     # 动态校准：从输入数据集自身推导全局参考值
-    datas = [
-        ChartRawData.from_workflow_ratings(
-            course=c.get("course", ""),
-            difficulty=c.get("difficulty", ""),
-            branch_type=c.get("branchType", "unbranched"),
-            ratings=c.get("ratings", {}),
-        )
-        for c in charts_data
-    ]
+    charts = [Chart.from_dict(c) for c in charts_data]
+    datas = [ChartRawData.from_chart(c) for c in charts]
     ref_values = RatingPipeline.calibrate(datas)
 
     pipeline = RatingPipeline(ref_values)
-    results = pipeline.compute_all(charts_data)
+    results = pipeline.compute_all(charts)
 
     output = []
     for i, r in enumerate(results):
         entry = r.as_dict()
-        if charts_data and i < len(charts_data):
-            c = charts_data[i]
-            entry["course"] = c.get("course", "")
-            entry["branchType"] = c.get("branchType", "")
+        if charts and i < len(charts):
+            c = charts[i]
+            entry["course"] = c.course
+            entry["branchType"] = c.branch_type
         output.append(entry)
 
     print(json.dumps(output, indent=2, ensure_ascii=False))
