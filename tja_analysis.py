@@ -25,6 +25,7 @@ import urllib.error
 import urllib.request
 from typing import Any, Dict, List, Optional
 
+import algorithms
 # ---------------------------------------------------------------------------
 # 配置
 # ---------------------------------------------------------------------------
@@ -38,12 +39,7 @@ _ALGORITHMS_DIR = os.path.join(_SCRIPT_DIR, "algorithms")
 if _ALGORITHMS_DIR not in sys.path:
     sys.path.insert(0, _ALGORITHMS_DIR)
 
-_stamina = importlib.import_module("\u4f53\u529b")            # 体力
-_compound = importlib.import_module("\u590d\u5408")           # 复合
-_rhythm = importlib.import_module("\u8282\u594f")             # 节奏
-_speed = importlib.import_module("\u624b\u901f")              # 手速
 _roll = importlib.import_module("\u6eda\u594f\u7b49\u6548")   # 滚奏等效
-_burst = importlib.import_module("\u7206\u53d1")              # 爆发
 
 
 # ===========================================================================
@@ -59,7 +55,6 @@ class TJAChartAnalyzer:
             "course": str,        # 原始 course 名 (如 "oni_p1")
             "difficulty": str,    # 标准化难度 (easy/normal/hard/oni/edit)
             "baseDifficulty": str,
-            "isUra": bool,
             "branchType": str,    # "unbranched" / "normal" / "expert" / "master"
             "ratings": {          # 算法原始输出
                 "stamina", "speed", "burst", "complex", "complexRatio",
@@ -133,7 +128,7 @@ class TJAChartAnalyzer:
         return intervals
 
     @staticmethod
-    def count_total_notes(branch_gaps, note_types=None) -> int:
+    def count_total_notes(branch_gaps, note_types=[]) -> int:
         """统计谱面 judgeable note 总数。"""
         if isinstance(note_types, list):
             return sum(1 for v in note_types if v in (1, 2, 3, 4))
@@ -149,7 +144,7 @@ class TJAChartAnalyzer:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def calc_roll_equivalent(intervals: List[float], note_types=None) -> tuple:
+    def calc_roll_equivalent(intervals: List[float], note_types=[]) -> tuple:
         """计算滚奏等效值，返回 (max_c, [C1, C2, C3])。"""
         if not intervals:
             return 0.0, [[], [], 0]
@@ -184,7 +179,7 @@ class TJAChartAnalyzer:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def calculate_raw_ratings(branch_gaps, note_types=None) -> Dict[str, Any]:
+    def calculate_raw_ratings(branch_gaps, note_types=[]) -> Dict[str, Any]:
         """计算单个谱面分支的全部原始定数。"""
         intervals = TJAChartAnalyzer.extract_intervals(branch_gaps)
         total_notes = TJAChartAnalyzer.count_total_notes(branch_gaps, note_types)
@@ -207,14 +202,14 @@ class TJAChartAnalyzer:
 
         # 体力
         try:
-            _, _, ratings["stamina"] = _stamina.calculate_result(intervals)
+            _, _, ratings["stamina"] = algorithms.calculate_result(intervals)
         except Exception:
             pass
 
         # 复合
         try:
             ratings["complex"], ratings["complexRatio"] = (
-                _compound.calculate_complete_compound_difficulty(intervals, note_types)
+                algorithms.calculate_complete_compound_difficulty(intervals, note_types)
             )
         except Exception:
             pass
@@ -222,14 +217,14 @@ class TJAChartAnalyzer:
         # 节奏
         try:
             ratings["rhythm"], ratings["rhythmRatio"] = (
-                _rhythm.compute_final_rhythm_difficulty(intervals)
+                algorithms.compute_final_rhythm_difficulty(intervals)
             )
         except Exception:
             pass
 
         # 手速
         try:
-            ratings["speed"] = _speed.compute_weighted_average(intervals)
+            ratings["speed"] = algorithms.compute_weighted_average(intervals)
         except Exception:
             pass
 
@@ -245,7 +240,7 @@ class TJAChartAnalyzer:
 
         # 爆发
         try:
-            ratings["burst"] = _burst.compute_weighted_average(intervals)
+            ratings["burst"] = algorithms.compute_weighted_average(intervals)
         except Exception:
             pass
 
@@ -287,7 +282,6 @@ class TJAChartAnalyzer:
                     "baseDifficulty": (
                         "oni" if normalized_diff == "edit" else normalized_diff
                     ),
-                    "isUra": normalized_diff == "edit",
                     "branchType": branch_type,
                     "ratings": ratings,
                 })
