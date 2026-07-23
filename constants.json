@@ -1,12 +1,12 @@
 {
   "metadata": {
-    "generated_at": "2026-07-23T23:28:49",
-    "mapping_url": "https://cdn.ourtaiko.org/api/ese_mapping",
+    "generated_at": "2026-07-24T00:13:10",
+    "mapping_url": "https://raw.githubusercontent.com/OurTaiko/ese-mapping-to-nijiiroid/refs/heads/main/data.json",
     "base_dir": "E:\\Programs\\TaikoNijiiroDondaEX Ver4.1\\TaikoNijiiroDondaEX Ver4.1\\Songs",
-    "total_songs": 1443,
-    "processed_songs": 1422,
-    "total_charts": 6268,
-    "failed": 21,
+    "total_songs": 1466,
+    "processed_songs": 1423,
+    "total_charts": 6259,
+    "failed": 43,
     "ref_values": {
       "min_体力换算": 0.0,
       "max_体力换算": 15.5,
@@ -131962,6 +131962,114 @@
         }
       ]
     },
+    "1496": {
+      "path": "07 Game Music\\The Encounter Code\\The Encounter Code.tja",
+      "charts": [
+        {
+          "course": "oni",
+          "branchType": "unbranched",
+          "sub_constant_1": 10.70873248186917,
+          "main_constant": 10.139348698977846,
+          "sub_constant_2": 9.810925492001672,
+          "stamina": 10.423110687559797,
+          "handspeed": 10.991383958174476,
+          "burst": 8.91770580850175,
+          "complex": 10.70416257273688,
+          "rhythm": 8.276724569575876,
+          "totalNotes": 910,
+          "raw": {
+            "stamina": 8.351401519506298,
+            "speed": 6.721006515035982,
+            "burst": 6.721006515035982,
+            "complex": 117.27067665697068,
+            "complexRatio": 0.12901064538720647,
+            "rhythm": 90.45779625089635,
+            "rhythmRatio": 0.09951352722870886
+          }
+        }
+      ]
+    },
+    "1497": {
+      "path": "07 Game Music\\ln(guis·tics)\\ln(guis·tics).tja",
+      "charts": [
+        {
+          "course": "oni",
+          "branchType": "unbranched",
+          "sub_constant_1": 11.558676514124114,
+          "main_constant": 11.637075392330452,
+          "sub_constant_2": 11.931246594515404,
+          "stamina": 12.759998869033968,
+          "handspeed": 12.32919178615161,
+          "burst": 10.650674840690794,
+          "complex": 9.272673133300698,
+          "rhythm": 12.13080016214631,
+          "totalNotes": 1076,
+          "raw": {
+            "stamina": 9.483568095506017,
+            "speed": 7.693957662655716,
+            "burst": 7.693957662655716,
+            "complex": 108.0,
+            "complexRatio": 0.10046511627906977,
+            "rhythm": 166.8456568952746,
+            "rhythmRatio": 0.15520526222816242
+          }
+        }
+      ]
+    },
+    "1498": {
+      "path": "07 Game Music\\Remnath\\Remnath.tja",
+      "charts": [
+        {
+          "course": "oni",
+          "branchType": "unbranched",
+          "sub_constant_1": 12.895759630729955,
+          "main_constant": 11.309409579751799,
+          "sub_constant_2": 10.777845982720462,
+          "stamina": 13.855312485585637,
+          "handspeed": 11.818030627243594,
+          "burst": 9.988527079016466,
+          "complex": 12.933148007387851,
+          "rhythm": 6.285444244356311,
+          "totalNotes": 1103,
+          "raw": {
+            "stamina": 10.26687802195479,
+            "speed": 7.322204092540796,
+            "burst": 7.322204092540796,
+            "complex": 216.64772777731486,
+            "complexRatio": 0.19659503428068498,
+            "rhythm": 84.6768283665283,
+            "rhythmRatio": 0.0768392271928569
+          }
+        }
+      ]
+    },
+    "1499": {
+      "path": "07 Game Music\\When Enemies Collapse\\When Enemies Collapse.tja",
+      "charts": [
+        {
+          "course": "edit",
+          "branchType": "unbranched",
+          "sub_constant_1": 10.626190967019589,
+          "main_constant": 10.614086417215455,
+          "sub_constant_2": 10.847694991553883,
+          "stamina": 10.464597199022757,
+          "handspeed": 10.435698342026148,
+          "burst": 8.197881971116939,
+          "complex": 10.969786186573733,
+          "rhythm": 12.578457691807634,
+          "totalNotes": 982,
+          "raw": {
+            "stamina": 8.368455050741128,
+            "speed": 6.316871521473562,
+            "burst": 6.316871521473562,
+            "complex": 132.64892137438025,
+            "complexRatio": 0.13521806460181474,
+            "rhythm": 161.11941920124764,
+            "rhythmRatio": 0.16423997879841756
+          }
+        }
+      ]
+    },
     "1502": {
       "path": "09 Namco Original\\DONKYO Likelihood\\DONKYO Likelihood.tja",
       "charts": [
@@ -136455,121 +136563,6 @@
         }
       ]
     },
-    "AC_165": {
-      "path": "03 Vocaloid\\Juumensou -Colorful Version-\\Juumensou -Colorful Version-.tja",
-      "charts": [
-        {
-          "course": "edit",
-          "branchType": "unbranched",
-          "sub_constant_1": 3.48312935188125,
-          "main_constant": 3.058599148878445,
-          "sub_constant_2": 1.9997709540932118,
-          "stamina": 5.395866165246359,
-          "handspeed": 1.776777907860569,
-          "burst": 0.12495595038799474,
-          "complex": 2.0308271316629254,
-          "rhythm": 1.3991064980315397,
-          "totalNotes": 999,
-          "raw": {
-            "stamina": 6.472350206923166,
-            "speed": 4.780474694112291,
-            "burst": 4.780474694112291,
-            "complex": 15.49996160012288,
-            "complexRatio": 0.015531023647417716,
-            "rhythm": 19.912713419989874,
-            "rhythmRatio": 0.019952618657304484
-          }
-        },
-        {
-          "course": "oni",
-          "branchType": "unbranched",
-          "sub_constant_1": 1.2202075627291438,
-          "main_constant": 1.3901403257129648,
-          "sub_constant_2": 1.6679382867120849,
-          "stamina": 2.105694099320559,
-          "handspeed": 0.18102996578128117,
-          "burst": 0.00011983940815227713,
-          "complex": 0.0,
-          "rhythm": 1.8569204154495946,
-          "totalNotes": 752,
-          "raw": {
-            "stamina": 4.889299878286934,
-            "speed": 3.9305426075843215,
-            "burst": 3.9305426075843215,
-            "complex": 0.0,
-            "complexRatio": 0.0,
-            "rhythm": 19.4759636819817,
-            "rhythmRatio": 0.02593337374431651
-          }
-        },
-        {
-          "course": "hard",
-          "branchType": "unbranched",
-          "sub_constant_1": 0.12478959218178179,
-          "main_constant": 0.1344948769104089,
-          "sub_constant_2": 0.11133108275002403,
-          "stamina": 0.2161418355093372,
-          "handspeed": 0.0001841014417830337,
-          "burst": 9.381267790291089e-14,
-          "complex": 0.0,
-          "rhythm": 0.11260870874733069,
-          "totalNotes": 453,
-          "raw": {
-            "stamina": 2.927504547809994,
-            "speed": 2.177388584121534,
-            "burst": 2.177388584121534,
-            "complex": 0.0,
-            "complexRatio": 0.0,
-            "rhythm": 0.639264811924658,
-            "rhythmRatio": 0.0014143026812492433
-          }
-        },
-        {
-          "course": "normal",
-          "branchType": "unbranched",
-          "sub_constant_1": 6.120803943576651e-06,
-          "main_constant": 0.03159163722082278,
-          "sub_constant_2": 0.04092053713484928,
-          "stamina": 0.0,
-          "handspeed": 1.0601543413442707e-05,
-          "burst": 1.5851405020131543e-17,
-          "complex": 0.0,
-          "rhythm": 0.04841783237534636,
-          "totalNotes": 328,
-          "raw": {
-            "stamina": 2.423495387455599,
-            "speed": 1.7048138390818128,
-            "burst": 1.7048138390818128,
-            "complex": 0.0,
-            "complexRatio": 0.0,
-            "rhythm": 0.13132403962767403,
-            "rhythmRatio": 0.0004016025676687279
-          }
-        },
-        {
-          "course": "easy",
-          "branchType": "unbranched",
-          "sub_constant_1": 7.07282159910055e-08,
-          "main_constant": 0.015109446091842036,
-          "sub_constant_2": 0.019557247950764634,
-          "stamina": 0.0,
-          "handspeed": 1.2250486362512705e-07,
-          "burst": 2.020211947395448e-23,
-          "complex": 0.0,
-          "rhythm": 0.023140447842884583,
-          "totalNotes": 256,
-          "raw": {
-            "stamina": 1.7591344697990827,
-            "speed": 1.1631343901329068,
-            "burst": 1.1631343901329068,
-            "complex": 0.0,
-            "complexRatio": 0.0,
-            "rhythm": 0.0,
-            "rhythmRatio": 0.0
-          }
-        }
-      ]
-    },
     "AC_172": {
       "path": "03 Vocaloid\\Matryoshka\\Matryoshka.tja",
       "charts": [
@@ -140723,192 +140716,6 @@
         }
       ]
     },
-    "AC_710": {
-      "path": "01 Pop\\TT -Japanese Version-\\TT -Japanese Version-.tja",
-      "charts": [
-        {
-          "course": "oni",
-          "branchType": "unbranched",
-          "sub_constant_1": 1.3122279796226552,
-          "main_constant": 1.6026471869211654,
-          "sub_constant_2": 2.049654305626179,
-          "stamina": 0.9484229984358286,
-          "handspeed": 0.023940800396885835,
-          "burst": 2.541613176539173e-07,
-          "complex": 2.065368602847447,
-          "rhythm": 2.3162325445536194,
-          "totalNotes": 275,
-          "raw": {
-            "stamina": 3.944523615189246,
-            "speed": 3.3047828276242175,
-            "burst": 3.3047828276242175,
-            "complex": 4.333266611545445,
-            "complexRatio": 0.015814841647976075,
-            "rhythm": 8.686167789617613,
-            "rhythmRatio": 0.0317013422978745
-          }
-        },
-        {
-          "course": "hard",
-          "branchType": "unbranched",
-          "sub_constant_1": 0.10209544785432452,
-          "main_constant": 0.5336655376808165,
-          "sub_constant_2": 0.8505746881139797,
-          "stamina": 0.17683434185159597,
-          "handspeed": 0.0002386621842364419,
-          "burst": 2.066673779033717e-13,
-          "complex": 0.0,
-          "rhythm": 1.004858784079882,
-          "totalNotes": 206,
-          "raw": {
-            "stamina": 2.8509084594034655,
-            "speed": 2.226374434281986,
-            "burst": 2.226374434281986,
-            "complex": 0.0,
-            "complexRatio": 0.0,
-            "rhythm": 2.988454701039836,
-            "rhythmRatio": 0.014577827809950419
-          }
-        },
-        {
-          "course": "normal",
-          "branchType": "unbranched",
-          "sub_constant_1": 4.277258447808019e-06,
-          "main_constant": 0.21821977166224885,
-          "sub_constant_2": 0.2861686604887591,
-          "stamina": 0.0,
-          "handspeed": 7.408428948706682e-06,
-          "burst": 5.3268249032168536e-18,
-          "complex": 0.0,
-          "rhythm": 0.3385993253667444,
-          "totalNotes": 154,
-          "raw": {
-            "stamina": 2.0404227863672078,
-            "speed": 1.6532408801117768,
-            "burst": 1.6532408801117768,
-            "complex": 0.0,
-            "complexRatio": 0.0,
-            "rhythm": 0.7500082499784815,
-            "rhythmRatio": 0.004902014705741709
-          }
-        },
-        {
-          "course": "easy",
-          "branchType": "unbranched",
-          "sub_constant_1": 5.566779817927593e-09,
-          "main_constant": 0.015109446091631751,
-          "sub_constant_2": 0.019557247950737402,
-          "stamina": 0.0,
-          "handspeed": 9.641945479199616e-09,
-          "burst": 8.833181540108216e-27,
-          "complex": 0.0,
-          "rhythm": 0.023140447842884583,
-          "totalNotes": 91,
-          "raw": {
-            "stamina": 1.242748242434723,
-            "speed": 0.9354106219784365,
-            "burst": 0.9354106219784365,
-            "complex": 0.0,
-            "complexRatio": 0.0,
-            "rhythm": 0.0,
-            "rhythmRatio": 0.0
-          }
-        }
-      ]
-    },
-    "AC_729": {
-      "path": "01 Pop\\Lemon\\Lemon.tja",
-      "charts": [
-        {
-          "course": "oni",
-          "branchType": "unbranched",
-          "sub_constant_1": 0.1817666595435714,
-          "main_constant": 1.5419440192916662,
-          "sub_constant_2": 2.6260773502162698,
-          "stamina": 0.3148278779811694,
-          "handspeed": 0.0008733903821909797,
-          "burst": 1.0707623416735698e-11,
-          "complex": 0.0,
-          "rhythm": 3.1056212604710796,
-          "totalNotes": 223,
-          "raw": {
-            "stamina": 3.1054340028925296,
-            "speed": 2.488237093656616,
-            "burst": 2.488237093656616,
-            "complex": 0.0,
-            "complexRatio": 0.0,
-            "rhythm": 14.045569018421247,
-            "rhythmRatio": 0.06326832891180742
-          }
-        },
-        {
-          "course": "hard",
-          "branchType": "unbranched",
-          "sub_constant_1": 2.336779354832795e-07,
-          "main_constant": 0.015109446093940148,
-          "sub_constant_2": 0.01955724795103638,
-          "stamina": 0.0,
-          "handspeed": 4.0474205686484224e-07,
-          "burst": 7.668596262165521e-22,
-          "complex": 0.0,
-          "rhythm": 0.023140447842884583,
-          "totalNotes": 124,
-          "raw": {
-            "stamina": 1.7487444175141658,
-            "speed": 1.288598893305911,
-            "burst": 1.288598893305911,
-            "complex": 0.0,
-            "complexRatio": 0.0,
-            "rhythm": 0.0,
-            "rhythmRatio": 0.0
-          }
-        },
-        {
-          "course": "normal",
-          "branchType": "unbranched",
-          "sub_constant_1": 2.9766885139955814e-08,
-          "main_constant": 0.01510944609166792,
-          "sub_constant_2": 0.019557247950742086,
-          "stamina": 0.0,
-          "handspeed": 5.155775744547048e-08,
-          "burst": 1.451144775154909e-24,
-          "complex": 0.0,
-          "rhythm": 0.023140447842884583,
-          "totalNotes": 88,
-          "raw": {
-            "stamina": 1.3244012474540592,
-            "speed": 1.0799742089123352,
-            "burst": 1.0799742089123352,
-            "complex": 0.0,
-            "complexRatio": 0.0,
-            "rhythm": 0.0,
-            "rhythmRatio": 0.0
-          }
-        },
-        {
-          "course": "easy",
-          "branchType": "unbranched",
-          "sub_constant_1": 3.2619888795950763e-11,
-          "main_constant": 0.015109446091630441,
-          "sub_constant_2": 0.01955724795073723,
-          "stamina": 0.0,
-          "handspeed": 5.649930473183349e-11,
-          "burst": 1.4259033835892918e-33,
-          "complex": 0.0,
-          "rhythm": 0.023140447842884583,
-          "totalNotes": 62,
-          "raw": {
-            "stamina": 0.8567293221044406,
-            "speed": 0.6021124279307253,
-            "burst": 0.6021124279307253,
-            "complex": 0.0,
-            "complexRatio": 0.0,
-            "rhythm": 0.0,
-            "rhythmRatio": 0.0
-          }
-        }
-      ]
-    },
     "AC_772": {
       "path": "01 Pop\\Glass o Ware!\\Glass o Ware!.tja",
       "charts": [
@@ -145033,6 +144840,36 @@
   },
   "errors": [
     {
+      "id": "129",
+      "path": "",
+      "error": "ese_mapping 中路径为空（无效 id）"
+    },
+    {
+      "id": "165",
+      "path": "",
+      "error": "ese_mapping 中路径为空（无效 id）"
+    },
+    {
+      "id": "710",
+      "path": "",
+      "error": "ese_mapping 中路径为空（无效 id）"
+    },
+    {
+      "id": "729",
+      "path": "",
+      "error": "ese_mapping 中路径为空（无效 id）"
+    },
+    {
+      "id": "743",
+      "path": "",
+      "error": "ese_mapping 中路径为空（无效 id）"
+    },
+    {
+      "id": "853",
+      "path": "",
+      "error": "ese_mapping 中路径为空（无效 id）"
+    },
+    {
       "id": "903",
       "path": "",
       "error": "ese_mapping 中路径为空（无效 id）"
@@ -145068,6 +144905,86 @@
       "error": "ese_mapping 中路径为空（无效 id）"
     },
     {
+      "id": "1468",
+      "path": "",
+      "error": "ese_mapping 中路径为空（无效 id）"
+    },
+    {
+      "id": "1480",
+      "path": "",
+      "error": "ese_mapping 中路径为空（无效 id）"
+    },
+    {
+      "id": "1506",
+      "path": "",
+      "error": "ese_mapping 中路径为空（无效 id）"
+    },
+    {
+      "id": "1508",
+      "path": "",
+      "error": "ese_mapping 中路径为空（无效 id）"
+    },
+    {
+      "id": "1509",
+      "path": "",
+      "error": "ese_mapping 中路径为空（无效 id）"
+    },
+    {
+      "id": "1510",
+      "path": "",
+      "error": "ese_mapping 中路径为空（无效 id）"
+    },
+    {
+      "id": "1511",
+      "path": "",
+      "error": "ese_mapping 中路径为空（无效 id）"
+    },
+    {
+      "id": "1512",
+      "path": "",
+      "error": "ese_mapping 中路径为空（无效 id）"
+    },
+    {
+      "id": "1513",
+      "path": "",
+      "error": "ese_mapping 中路径为空（无效 id）"
+    },
+    {
+      "id": "1515",
+      "path": "",
+      "error": "ese_mapping 中路径为空（无效 id）"
+    },
+    {
+      "id": "1516",
+      "path": "",
+      "error": "ese_mapping 中路径为空（无效 id）"
+    },
+    {
+      "id": "1517",
+      "path": "",
+      "error": "ese_mapping 中路径为空（无效 id）"
+    },
+    {
+      "id": "1518",
+      "path": "",
+      "error": "ese_mapping 中路径为空（无效 id）"
+    },
+    {
+      "id": "1519",
+      "path": "",
+      "error": "ese_mapping 中路径为空（无效 id）"
+    },
+    {
+      "id": "1520",
+      "path": "",
+      "error": "ese_mapping 中路径为空（无效 id）"
+    },
+    {
+      "id": "1521",
+      "path": "",
+      "error": "ese_mapping 中路径为空（无效 id）"
+    },
+    {
       "id": "ACX_0017",
       "path": "",
       "error": "ese_mapping 中路径为空（无效 id）"
@@ -145093,11 +145010,6 @@
       "error": "ese_mapping 中路径为空（无效 id）"
     },
     {
-      "id": "AC_129",
-      "path": "",
-      "error": "ese_mapping 中路径为空（无效 id）"
-    },
-    {
       "id": "AC_185",
       "path": "",
       "error": "ese_mapping 中路径为空（无效 id）"
@@ -145113,7 +145025,12 @@
       "error": "ese_mapping 中路径为空（无效 id）"
     },
     {
-      "id": "AC_743",
+      "id": "CS_makaim",
+      "path": "",
+      "error": "ese_mapping 中路径为空（无效 id）"
+    },
+    {
+      "id": "CS_ttk3",
       "path": "",
       "error": "ese_mapping 中路径为空（无效 id）"
     },
