@@ -186,7 +186,6 @@ def build_chart_entry(chart: Chart, result) -> dict:
     ratings = chart.ratings
     return {
         "course": chart.course,
-        "difficulty": chart.difficulty,
         "branchType": chart.branch_type,
         "sub_constant_1": result.sub_constant_1,
         "main_constant": result.main_constant,

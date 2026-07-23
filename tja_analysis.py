@@ -109,13 +109,10 @@ class ChartRatings:
 class Chart:
     """单个谱面分支的分析结果（一个 course × branch 组合）。
 
-    course / difficulty / branch_type 描述谱面来源，
-    ratings 为该分支的算法原始定数。
+    course / branch_type 描述谱面来源，ratings 为该分支的算法原始定数。
     """
 
     course: str = ""                       # 原始 course 名 (如 "oni_p1")
-    difficulty: str = ""                   # 标准化难度 (easy/normal/hard/oni/edit)
-    base_difficulty: str = ""              # 基础难度 (edit → oni 收敛)
     branch_type: str = "unbranched"        # unbranched / normal / expert / master
     ratings: ChartRatings = field(default_factory=ChartRatings)
 
@@ -123,8 +120,6 @@ class Chart:
         """序列化为 camelCase JSON 友好字典（保持向后兼容）。"""
         return {
             "course": self.course,
-            "difficulty": self.difficulty,
-            "baseDifficulty": self.base_difficulty,
             "branchType": self.branch_type,
             "ratings": self.ratings.to_dict(),
         }
@@ -136,8 +131,6 @@ class Chart:
             return cls()
         return cls(
             course=d.get("course", ""),
-            difficulty=d.get("difficulty", ""),
-            base_difficulty=d.get("baseDifficulty", ""),
             branch_type=d.get("branchType", "unbranched"),
             ratings=ChartRatings.from_dict(d.get("ratings", {})),
         )
@@ -156,21 +149,6 @@ class TJAChartAnalyzer:
 
     def __init__(self, api_url: Optional[str] = None):
         self.api_url = api_url or os.environ.get("TJA_API_URL", DEFAULT_API_URL)
-
-    # ------------------------------------------------------------------
-    # 难度名称标准化
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def normalize_difficulty_name(name: str) -> str:
-        """标准化难度名称，处理 course_side 格式（如 edit_p1 → edit）。"""
-        mapping = {"0": "easy", "1": "normal", "2": "hard", "3": "oni", "4": "edit"}
-        base = str(name).lower()
-        for suffix in ("_p1", "_p2", "_single"):
-            if base.endswith(suffix):
-                base = base[: -len(suffix)]
-                break
-        return mapping.get(base, base)
 
     # ------------------------------------------------------------------
     # API 调用
@@ -343,7 +321,6 @@ class TJAChartAnalyzer:
             if not isinstance(chart_gaps, dict):
                 continue
 
-            normalized_diff = self.normalize_difficulty_name(course_name)
             chart_note_types = note_types_all.get(course_name, {})
             if not isinstance(chart_note_types, dict):
                 chart_note_types = {}
@@ -357,10 +334,6 @@ class TJAChartAnalyzer:
 
                 charts.append(Chart(
                     course=course_name,
-                    difficulty=normalized_diff,
-                    base_difficulty=(
-                        "oni" if normalized_diff == "edit" else normalized_diff
-                    ),
                     branch_type=branch_type,
                     ratings=ratings,
                 ))

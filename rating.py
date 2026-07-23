@@ -51,7 +51,6 @@ class ChartRawData:
     """
 
     course: str = ""
-    difficulty: str = ""
     branch_type: str = "unbranched"
 
     # ---- 谱面基础 ----
@@ -70,14 +69,12 @@ class ChartRawData:
     def from_workflow_ratings(
         cls,
         course: str,
-        difficulty: str,
         branch_type: str,
         ratings: ChartRatings,
     ) -> "ChartRawData":
         """从 tja_analysis 的 ChartRatings 构造。"""
         return cls(
             course=course,
-            difficulty=difficulty,
             branch_type=branch_type,
             total_notes=ratings.total_notes,
             stamina_raw=ratings.stamina,
@@ -94,7 +91,6 @@ class ChartRawData:
         """从 tja_analysis 的 Chart 对象构造。"""
         return cls.from_workflow_ratings(
             course=chart.course,
-            difficulty=chart.difficulty,
             branch_type=chart.branch_type,
             ratings=chart.ratings,
         )
