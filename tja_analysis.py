@@ -281,7 +281,7 @@ class TJAChartAnalyzer:
 
         # 手速
         try:
-            ratings.speed = algorithms.compute_weighted_average(intervals)
+            ratings.speed = algorithms.compute_speed(intervals)
         except Exception:
             pass
 
@@ -297,7 +297,7 @@ class TJAChartAnalyzer:
 
         # 爆发
         try:
-            ratings.burst = algorithms.compute_weighted_average(intervals)
+            ratings.burst = algorithms.compute_burst(intervals)
         except Exception:
             pass
 
