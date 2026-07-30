@@ -200,7 +200,8 @@ class RatingPipeline:
     @staticmethod
     def _convert_complex_ratio(ratio: float) -> float:
         """复合占比换算 — tanh 映射"""
-        return 18200.736 * math.tanh(4.491 * ratio + 3.86) - 18184.558
+        val = 18200.736 * math.tanh(4.491 * ratio + 3.86) - 18184.558
+        return max(min(val, 15.5), 0.0)
 
     @staticmethod
     def _complex_upper(total_notes: int) -> float:
