@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""从 constants.json 提取 edit、oni 和 hard 难度的定数字段。
+"""从 raw_constants.json 提取 edit、oni 和 hard 难度的定数字段。
 
 用法：
     uv run extract_song_constants.py
-    uv run extract_song_constants.py constants.json -o song_constants.json
+    uv run extract_song_constants.py raw_constants.json -o constants.json
 """
 
 from __future__ import annotations
@@ -14,8 +14,8 @@ from pathlib import Path
 from typing import Any
 
 
-DEFAULT_INPUT = Path("constants.json")
-DEFAULT_OUTPUT = Path("song_constants.json")
+DEFAULT_INPUT = Path("raw_constants.json")
+DEFAULT_OUTPUT = Path("constants.json")
 
 ALLOWED_BRANCH_TYPES = {"master", "unbranched"}
 
@@ -90,7 +90,7 @@ def extract_song_constants(data: dict[str, Any]) -> dict[str, dict[str, Any]]:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="从 constants.json 提取 edit、oni 和 hard 难度定数"
+        description="从 raw_constants.json 提取 edit、oni 和 hard 难度定数"
     )
     parser.add_argument(
         "input",
