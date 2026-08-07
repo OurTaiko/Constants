@@ -22,7 +22,7 @@
         收集全部 ChartRawData → calibrate → 13 个全局参考值
         RatingPipeline(ref) → compute_all → 最终 8 字段
                        │
-        写 constants.json
+        写 raw_constants.json
 
 用法:
     uv run batch_workflow.py                       # 全量
@@ -56,7 +56,7 @@ DEFAULT_BASE_DIR = (
 )
 DEFAULT_MAPPING_URL = "https://cdn.ourtaiko.org/api/ese_mapping"
 DEFAULT_CACHE_DIR = ".cache"
-DEFAULT_OUTPUT = "constants.json"
+DEFAULT_OUTPUT = "raw_constants.json"
 DEFAULT_WORKERS = 8
 
 # TJA 文件可能的编码，按优先级回退
