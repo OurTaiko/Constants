@@ -186,11 +186,10 @@ class RatingPipeline:
     @staticmethod
     def _convert_burst(raw: float) -> float:
         """爆发换算 — 分段函数"""
-        threshold = 35.5 / 7.0  # ≈ 5.0714
-        if raw < threshold:
-            return (14.0 * raw / 71.0) ** (71.0 / 2.0)
         if raw < 6.0:
-            return 7.0 * raw - 34.5
+            return 4 * (6 ** (-63/8)) * (raw ** (63/8))
+        if raw < 7.0:
+            return 5.25 * raw - 27.5
         if raw < 10.0:
             return 7.0 / 4.0 * raw - 3.0
         if raw < 12.75:
