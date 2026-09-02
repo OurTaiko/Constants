@@ -25,6 +25,7 @@
         写 raw_constants.json
 
 用法:
+    首次运行先复制 .env.example 为 .env，设置 SONGS_BASE_DIR。
     uv run batch_workflow.py                       # 全量
     uv run batch_workflow.py --limit 5 --workers 4 # 小批量冒烟
     uv run batch_workflow.py --refresh             # 清空缓存重来
@@ -45,15 +46,14 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+from dotenv import load_dotenv
+
 from rating import ChartRawData, RatingPipeline
 from tja_analysis import Chart, TJAChartAnalyzer
 
 # ---------------------------------------------------------------------------
 # 默认配置
 # ---------------------------------------------------------------------------
-DEFAULT_BASE_DIR = (
-    r"E:\Programs\TaikoNijiiroDondaEX Ver4.1\TaikoNijiiroDondaEX Ver4.1\Songs"
-)
 DEFAULT_MAPPING_URL = "https://cdn.ourtaiko.org/api/ese_mapping"
 DEFAULT_CACHE_DIR = ".cache"
 DEFAULT_OUTPUT = "raw_constants.json"
@@ -209,10 +209,15 @@ def build_chart_entry(chart: Chart, result) -> dict:
 
 
 def main() -> int:
+    load_dotenv(Path(__file__).resolve().with_name(".env"), encoding="utf-8-sig")
     parser = argparse.ArgumentParser(
         description="批量定数计算工作流 — ese_mapping → 本地 tja → 最终定数 JSON",
     )
-    parser.add_argument("--base-dir", default=DEFAULT_BASE_DIR, help="Songs 根目录")
+    parser.add_argument(
+        "--base-dir",
+        default=os.environ.get("SONGS_BASE_DIR"),
+        help="Songs 根目录（默认读取 .env 或环境变量 SONGS_BASE_DIR）",
+    )
     parser.add_argument("--mapping-url", default=DEFAULT_MAPPING_URL, help="ese_mapping API")
     parser.add_argument("--cache-dir", default=DEFAULT_CACHE_DIR, help="缓存目录")
     parser.add_argument("--output", default=DEFAULT_OUTPUT, help="输出 JSON 路径")
@@ -221,6 +226,8 @@ def main() -> int:
     parser.add_argument("--no-cache", action="store_true", help="禁用缓存，强制全量请求")
     parser.add_argument("--refresh", action="store_true", help="清空缓存后运行")
     args = parser.parse_args()
+    if not args.base_dir or not args.base_dir.strip():
+        parser.error("请在 .env 中设置 SONGS_BASE_DIR，或通过 --base-dir 指定 Songs 根目录")
 
     use_cache = not args.no_cache
     cache_dir = Path(args.cache_dir)

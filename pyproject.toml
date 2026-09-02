@@ -3,7 +3,9 @@ name = "taiko-constants"
 version = "0.1.0"
 description = "本地 TJA 定数计算工作流 — 通过 TJAAnalyzer API 分析谱面并计算难度定数"
 requires-python = ">=3.10"
-dependencies = []
+dependencies = [
+    "python-dotenv>=1.2.3",
+]
 
 [dependency-groups]
 dev = []

@@ -2,6 +2,12 @@
 
 > <https://github.com/OurTaiko>
 
+## 本地运行配置
+
+首次运行将 `.env.example` 复制为仓库根目录的 `.env`，把 `SONGS_BASE_DIR` 改为本机谱面目录，然后执行 `uv run batch_workflow.py`。
+
+路径配置优先级为：`--base-dir` 参数 > 系统环境变量 `SONGS_BASE_DIR` > `.env`。未配置时程序会提示设置路径。`.env` 和 `.env.*` 已被 Git 忽略，仅提交 `.env.example` 配置示例。
+
 ## 初始数据
 
 D: totalNotes  
