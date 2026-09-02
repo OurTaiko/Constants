@@ -1,5 +1,8 @@
 # Basic .gitattributes for a python repo.
 
+# Normalize text files to LF in the repository and working tree.
+* text=auto eol=lf
+
 # Source files
 # ============
 *.pxd    text diff=python
