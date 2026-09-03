@@ -8,3 +8,4 @@ __pycache__
 .env.*
 !.env.example
 raw_constants.json
+*.sample.json

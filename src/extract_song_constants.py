@@ -2,8 +2,8 @@
 """从 raw_constants.json 提取 edit、oni 和 hard 难度的定数字段。
 
 用法：
-    uv run extract_song_constants.py
-    uv run extract_song_constants.py raw_constants.json -o constants.json
+    uv run src/extract_song_constants.py
+    uv run src/extract_song_constants.py raw_constants.json -o constants.json
 """
 
 from __future__ import annotations

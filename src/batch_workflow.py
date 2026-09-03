@@ -26,9 +26,9 @@
 
 用法:
     首次运行先复制 .env.example 为 .env，设置 SONGS_BASE_DIR。
-    uv run batch_workflow.py                       # 全量
-    uv run batch_workflow.py --limit 5 --workers 4 # 小批量冒烟
-    uv run batch_workflow.py --refresh             # 忽略并更新本次缓存
+    uv run src/batch_workflow.py                       # 全量
+    uv run src/batch_workflow.py --limit 5 --workers 4 # 小批量冒烟
+    uv run src/batch_workflow.py --refresh             # 忽略并更新本次缓存
 """
 
 from __future__ import annotations
@@ -59,6 +59,7 @@ DEFAULT_MAPPING_URL = "https://cdn.ourtaiko.org/api/ese_mapping"
 DEFAULT_CACHE_DIR = ".cache"
 DEFAULT_OUTPUT = "raw_constants.json"
 DEFAULT_WORKERS = 8
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 # TJA 文件可能的编码，按优先级回退
 DECODINGS = ("utf-8-sig", "utf-8", "shift_jis", "gb18030", "latin-1")
@@ -269,7 +270,7 @@ def build_chart_entry(chart: Chart, result) -> dict:
 
 
 def main() -> int:
-    load_dotenv(Path(__file__).resolve().with_name(".env"), encoding="utf-8-sig")
+    load_dotenv(PROJECT_ROOT / ".env", encoding="utf-8-sig")
     parser = argparse.ArgumentParser(
         description="批量定数计算工作流 — ese_mapping → 本地 tja → 最终定数 JSON",
     )

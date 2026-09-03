@@ -4,7 +4,7 @@
 ====================================================
 
 第二阶段模块：将 tja_analysis 产出的原始算法值转换为最终 8 个输出字段。
-完整批量工作流请使用 batch_workflow.py（ese_mapping → 本地 tja → 最终定数）。
+完整批量工作流请使用 src/batch_workflow.py（ese_mapping → 本地 tja → 最终定数）。
 
 用法:
     from tja_analysis import TJAChartAnalyzer
