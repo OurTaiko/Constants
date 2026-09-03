@@ -8,6 +8,26 @@
 
 路径配置优先级为：`--base-dir` 参数 > 系统环境变量 `SONGS_BASE_DIR` > `.env`。未配置时程序会提示设置路径。`.env` 和 `.env.*` 已被 Git 忽略，仅提交 `.env.example` 配置示例。
 
+### 一次运行完成计算和导出
+
+```sh
+uv run batch_workflow.py
+```
+
+同时生成 `raw_constants.json`（完整结果、校准值和错误信息）与 `constants.json`（edit/oni/hard 精简结果），无需再手动运行 extract。所有难度和分支仍参与原有全局校准，公式和选谱规则不变。
+
+- `--limit 5`：小批量测试，默认输出 `raw_constants.sample.json` 和 `constants.sample.json`，不覆盖正式结果。测试使用子集校准，定数不能与全量直接比较。
+- `--output out/raw.json`：指定完整结果路径，精简结果默认写入同目录的 `constants.json`；小批量时为 `constants.sample.json`。
+- `--constants-output out/constants.json`：单独指定精简结果路径。显式路径会覆盖对应文件，请避免将测试输出指向正式文件。
+- `--no-cache`：不读取也不写入任何缓存。
+- `--refresh`：重新请求并更新本次处理歌曲的两层缓存，不删除整个目录，不能与 `--no-cache` 同用。
+
+缓存分两层：`.cache/{id}.json` 保存 API 分析；`.cache/raw/{id}.json` 保存原始指标。旧 API 缓存可继续使用，首次运行补建指标缓存。原始分析和 algorithms 代码变化时自动重新计算指标；仅修改 `rating.py` 时复用指标，仍对全部成功谱面重新校准和计算最终定数。服务端在同一 URL 更新时，可使用 `--refresh` 强制更新。
+
+独立 `uv run extract_song_constants.py` 仍可用于重新导出已有 raw 数据。输出文件分别原子替换，但两份文件并非跨文件事务；若第二份写入失败，可用独立 extract 恢复。部分歌曲失败时仍按原流程输出成功部分，详情见 raw 的 `errors`。
+
+离线回归测试：`uv run python -m unittest discover -s Tests -p "test_*.py"`。
+
 ## 初始数据
 
 D: totalNotes  
