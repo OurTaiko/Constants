@@ -157,7 +157,7 @@ class RatingPipeline:
     def __init__(self, ref_values: Dict[str, float]):
         """构造计算管线。
 
-        ref_values 必须由 RatingPipeline.calibrate() 从数据集动态推导得到，
+        ref_values 必须由 RatingPipeline.calibrate() 从数据集动态推导或从 batch 缓存读取，
         不再提供固定默认值。
         """
         self.ref: Dict[str, float] = ref_values
@@ -210,10 +210,8 @@ class RatingPipeline:
     def _convert_complex(self, 复合占比换算: float, 复合上限: float) -> float:
         """复合换算 — 用全局复合占比换算的 MIN/MAX 归一后取 min 与上限"""
         ref = self.ref
-        归一值 = (
-            (复合占比换算 - ref["min_复合占比换算"])
-            / (ref["max_复合占比换算"] - ref["min_复合占比换算"])
-            * 15.5
+        归一值 = self._normalize(
+            复合占比换算, ref["min_复合占比换算"], ref["max_复合占比换算"]
         )
         return min(归一值, 复合上限)
 

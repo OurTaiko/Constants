@@ -48,6 +48,7 @@ from typing import Dict, List, Optional, Tuple
 
 from dotenv import load_dotenv
 
+from computing_parameters import DEFAULT_PARAMETERS, SAMPLE_PARAMETERS
 from extract_song_constants import extract_song_constants
 from rating import ChartRawData, RatingPipeline
 from tja_analysis import Chart, TJAChartAnalyzer
@@ -283,9 +284,10 @@ def main() -> int:
     parser.add_argument("--cache-dir", default=DEFAULT_CACHE_DIR, help="缓存目录")
     parser.add_argument("--output", help="完整 JSON 路径（全量默认 raw_constants.json）")
     parser.add_argument("--constants-output", help="精简 JSON 路径（默认与完整输出同目录）")
+    parser.add_argument("--parameters-output", help="全局参数缓存路径（默认 cached_computing_parameters.json，小批量使用 *.sample.json）")
     parser.add_argument("--workers", type=int, default=DEFAULT_WORKERS, help="并发线程数")
     parser.add_argument("--limit", type=int, default=0, help="只处理前 N 首（0=全部）")
-    parser.add_argument("--no-cache", action="store_true", help="禁用缓存，强制全量请求")
+    parser.add_argument("--no-cache", action="store_true", help="禁用 API/原始指标缓存，仍输出全局参数")
     parser.add_argument("--refresh", action="store_true", help="忽略并更新本次歌曲的缓存，不删除缓存目录")
     args = parser.parse_args()
     if not args.base_dir or not args.base_dir.strip():
@@ -299,8 +301,10 @@ def main() -> int:
     out_path = Path(args.output or ("raw_constants.sample.json" if args.limit else DEFAULT_OUTPUT))
     constants_path = Path(args.constants_output) if args.constants_output else out_path.with_name(
         "constants.sample.json" if args.limit else "constants.json")
-    if out_path.resolve() == constants_path.resolve():
-        parser.error("完整输出和精简输出不能使用同一路径")
+    parameters_path = Path(args.parameters_output or (
+        SAMPLE_PARAMETERS if args.limit else DEFAULT_PARAMETERS))
+    if len({p.resolve() for p in (out_path, constants_path, parameters_path)}) != 3:
+        parser.error("完整输出、精简输出和参数缓存不能使用同一路径")
 
     use_cache = not args.no_cache
     cache_dir = Path(args.cache_dir)
@@ -424,8 +428,9 @@ def main() -> int:
     constants = extract_song_constants(output)
     write_json_atomic(out_path, output, indent=2)
     write_json_atomic(constants_path, constants, indent=2)
+    write_json_atomic(parameters_path, ref_values, indent=2)
     print(
-        f"[完成] 写入 {out_path.resolve()} 和 {constants_path.resolve()} "
+        f"[完成] 写入 {out_path.resolve()}、{constants_path.resolve()} 和 {parameters_path.resolve()} "
         f"({len(songs_out)} 首 / {len(flat)} 谱面，失败 {len(errors)})",
         file=sys.stderr,
     )

@@ -36,7 +36,18 @@
    uv run src/batch_workflow.py
    ```
 
-   自动生成根目录的 `constants.json`（edit / oni / hard 精简结果）和 `raw_constants.json`（完整分支结果、校准值及错误信息），不需要再手动运行 extract。
+   自动生成根目录的 `constants.json`（edit / oni / hard 精简结果）、`raw_constants.json`（完整分支结果、校准值及错误信息）和 `cached_computing_parameters.json`（13 个全局 min/max），不需要再手动运行 extract。
+
+5. 使用 batch 保存的参数计算单个 TJA：
+
+   ```sh
+   uv run src/single_workflow.py "Tests/495.tja"
+   uv run src/single_workflow.py "D:/Songs/example.tja"
+   ```
+
+   支持绝对路径或相对于当前工作目录的路径。结果以 JSON 文本直接输出到控制台，包含全部难度/分支、8 个最终定数字段、音符数及原始指标，不写入任何结果或缓存文件。无需 Songs 目录配置或 ese_mapping，但仍需调用 TJA Analysis API 分析该文件；API 地址沿用 `.env` / 环境变量中的 `TJA_API_URL`。
+
+   默认读取当前工作目录下的 `cached_computing_parameters.json`，可用 `--parameters "路径/参数.json"` 指定。参数缺失或损坏会报错，需先运行 batch。单文件计算不重新校准；算法变化或希望更新全局范围时，应重新跑全量 batch。
 
 ## 常用命令
 
@@ -50,8 +61,12 @@ uv run src/batch_workflow.py --base-dir "D:/Songs"
 # 忽略并更新本次歌曲的缓存
 uv run src/batch_workflow.py --refresh
 
-# 完全不读取或写入缓存
+# 不读取或写入 API/原始指标缓存，仍保存本次全局参数
 uv run src/batch_workflow.py --no-cache
+
+# 指定全局参数的保存路径与读取路径
+uv run src/batch_workflow.py --parameters-output out/cached_computing_parameters.json
+uv run src/single_workflow.py "Tests/495.tja" --parameters out/cached_computing_parameters.json
 
 # 自定义输出目录（精简结果默认写到 out/constants.json）
 uv run src/batch_workflow.py --output out/raw.json
@@ -65,13 +80,15 @@ uv run src/batch_workflow.py --help
 
 缓存位于 `.cache/`：第一层保存 API 分析，第二层保存原始指标。原始算法代码变化后自动重算指标；仅修改最终换算公式时复用指标，但始终重新全局校准。即使命中缓存，batch 仍需联网获取映射，并读取本地谱面检查内容变化。
 
-小批量使用子集校准，定数不能当作正式结果。部分歌曲失败时仍会输出成功部分，请检查终端失败计数及 raw 文件的 `errors`。`--refresh` 和 `--no-cache` 不能同时使用。
+小批量使用子集校准，定数不能当作正式结果；其参数默认写入 `cached_computing_parameters.sample.json`，不会覆盖全量参数，试算时需用 `--parameters` 显式指定。部分歌曲失败时仍会输出成功部分及对应参数，请检查终端失败计数及 raw 文件的 `errors`；全部失败时不更新参数。`--refresh` 和 `--no-cache` 不能同时使用。
 
 ## 项目结构
 
 ```text
 src/
   batch_workflow.py          # 批量计算及自动导出入口
+  single_workflow.py         # 使用缓存参数计算单个 TJA，仅控制台输出
+  computing_parameters.py    # 全局参数缓存格式及读取校验
   extract_song_constants.py  # 独立提取入口
   tja_analysis.py            # API 分析及原始指标
   rating.py                  # 校准及最终定数换算
@@ -84,7 +101,7 @@ constants.json               # 保持原有发布路径的精简定数
 pyproject.toml / uv.lock      # 依赖定义及锁文件
 ```
 
-`.env`、`.cache/`、`raw_constants.json` 和 `*.sample.json` 不纳入 Git。输出和缓存的相对路径基于执行命令时的目录；`.env` 始终从仓库根目录读取。
+`.env`、`.cache/`、`raw_constants.json`、`cached_computing_parameters.json` 和 `*.sample.json` 不纳入 Git。输出和缓存的相对路径基于执行命令时的目录；`.env` 始终从仓库根目录读取。
 
 ## 开发与测试
 
