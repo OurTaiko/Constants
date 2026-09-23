@@ -85,8 +85,8 @@ def fetch_ese_mapping(url: str) -> Dict[str, str]:
 
 
 def resolve_tja_path(base_dir: str, relative: str) -> Path:
-    """把映射里的相对路径（含反斜杠）拼到 Songs 根目录上。"""
-    return Path(base_dir) / relative
+    """统一映射中的 Windows/POSIX 分隔符，再拼到本机 Songs 根目录上。"""
+    return Path(base_dir) / relative.replace("\\", "/")
 
 
 def decode_tja(raw: bytes) -> str:

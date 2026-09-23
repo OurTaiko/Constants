@@ -28,7 +28,7 @@
    SONGS_BASE_DIR='C:/path/to/Songs'
    ```
 
-   Songs 内的相对路径需与 ese_mapping 匹配。配置优先级：`--base-dir` > 环境变量 > `.env`。
+   Songs 内的相对路径需与 ese_mapping 匹配。映射路径支持 Windows 的反斜杠 `\`、斜杠 `/` 及混合形式，脚本会自动转换为本机路径；`SONGS_BASE_DIR` 填写当前机器上的实际目录。配置优先级：`--base-dir` > 环境变量 > `.env`。
 
 4. 运行全量计算：
 
