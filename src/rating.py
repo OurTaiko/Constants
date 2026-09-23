@@ -249,6 +249,8 @@ class RatingPipeline:
         体力: float, 手速: float, 复合: float, max_粗糙75定数: float
     ) -> float:
         粗糙75定数 = math.sqrt((体力 * 体力 + 手速 * 手速 + 复合 * 复合) / 3.0)
+        # Magic number：限制 Lightning Beams 等歌曲的粗糙定数。
+        粗糙75定数 = min(粗糙75定数, 15.4)
         return 15.5 * 粗糙75定数 / max_粗糙75定数
 
     # ------------------------------------------------------------------
@@ -318,6 +320,8 @@ class RatingPipeline:
     ) -> float:
         ref = self.ref
         粗糙主定数 = self._calc_raw_main_constant(体力, 手速, 爆发, 复合, 节奏)
+        # Magic number：限制 Lightning Beams 等歌曲的粗糙定数。
+        粗糙主定数 = min(粗糙主定数, 15.15)
         # 归一主定数：13.3 软上限
         if 粗糙主定数 > 13.3:
             return (
@@ -483,6 +487,8 @@ class RatingPipeline:
         粗糙99定数 = self._calc_raw_99_constant(
             体力, 手速, 爆发, 复合, 节奏, 归一主定数
         )
+        # Magic number：限制 Lightning Beams 等歌曲的粗糙定数。
+        粗糙99定数 = min(粗糙99定数, 15.0)
 
         # 归一99定数：13.3 软上限
         if 粗糙99定数 > 13.3:
