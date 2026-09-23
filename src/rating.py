@@ -31,6 +31,11 @@ from typing import Dict, List, Optional
 
 from tja_analysis import Chart, ChartRatings
 
+# Magic numbers：限制 Lightning Beams 等歌曲的粗糙定数，计算与校准共用。
+RAW_75_CAP = 15.4
+RAW_MAIN_CAP = 15.15
+RAW_99_CAP = 15.0
+
 # ---------------------------------------------------------------------------
 # 全局参考值（13 个 MIN/MAX）现全部由 RatingPipeline.calibrate() 从数据集动态推导，
 # 不再保留 rating.xlsx 的固定值。键名 = min_/max_ + workflow.md 中文名。
@@ -249,8 +254,7 @@ class RatingPipeline:
         体力: float, 手速: float, 复合: float, max_粗糙75定数: float
     ) -> float:
         粗糙75定数 = math.sqrt((体力 * 体力 + 手速 * 手速 + 复合 * 复合) / 3.0)
-        # Magic number：限制 Lightning Beams 等歌曲的粗糙定数。
-        粗糙75定数 = min(粗糙75定数, 15.4)
+        粗糙75定数 = min(粗糙75定数, RAW_75_CAP)
         return 15.5 * 粗糙75定数 / max_粗糙75定数
 
     # ------------------------------------------------------------------
@@ -320,8 +324,7 @@ class RatingPipeline:
     ) -> float:
         ref = self.ref
         粗糙主定数 = self._calc_raw_main_constant(体力, 手速, 爆发, 复合, 节奏)
-        # Magic number：限制 Lightning Beams 等歌曲的粗糙定数。
-        粗糙主定数 = min(粗糙主定数, 15.15)
+        粗糙主定数 = min(粗糙主定数, RAW_MAIN_CAP)
         # 归一主定数：13.3 软上限
         if 粗糙主定数 > 13.3:
             return (
@@ -487,8 +490,7 @@ class RatingPipeline:
         粗糙99定数 = self._calc_raw_99_constant(
             体力, 手速, 爆发, 复合, 节奏, 归一主定数
         )
-        # Magic number：限制 Lightning Beams 等歌曲的粗糙定数。
-        粗糙99定数 = min(粗糙99定数, 15.0)
+        粗糙99定数 = min(粗糙99定数, RAW_99_CAP)
 
         # 归一99定数：13.3 软上限
         if 粗糙99定数 > 13.3:
@@ -569,7 +571,7 @@ class RatingPipeline:
         """从全量数据集自身计算 13 个全局 MIN/MAX 参考值。
 
         忠实于 workflow.md 的「所有乐曲」语义：归一化所需的全局极值
-        均由本次输入数据集推导（全动态，不依赖任何固定值）。
+        均由本次输入数据集推导；三个粗糙定数均先限幅，再取全局最大值。
 
         按 workflow.md 的依赖层级分阶段计算：
           A 每谱: 体力换算,手速换算,爆发换算,复合占比换算,复合上限,节奏占比换算,节奏上限
@@ -577,10 +579,10 @@ class RatingPipeline:
           C 每谱: 复合换算=min((复合占比换算-min)/(max-min)*15.5, 复合上限);  节奏换算=min(节奏占比换算, 节奏上限)
           D 全局: min/max_体力换算, max_手速换算, max_爆发换算, min/max_复合换算, min/max_节奏换算
           E 每谱: 体力,手速,爆发,复合,节奏 (归一化，使用本阶段刚算出的全局极值)
-          F 每谱: 粗糙75定数=sqrt((体力²+手速²+复合²)/3);  粗糙主定数=_calc_raw_main_constant
+          F 每谱: 粗糙75定数=min(sqrt((体力²+手速²+复合²)/3),15.4);  粗糙主定数=min(_calc_raw_main_constant,15.15)
           G 全局: max_粗糙75定数, max_粗糙主定数
           H 每谱: 归一主定数 (13.3 软上限，用 max_粗糙主定数)
-          I 每谱: 粗糙99定数=_calc_raw_99_constant(..., 归一主定数)
+          I 每谱: 粗糙99定数=min(_calc_raw_99_constant(..., 归一主定数),15.0)
           J 全局: max_粗糙99定数
         """
         if not all_data:
@@ -629,11 +631,17 @@ class RatingPipeline:
 
         # Stage F: 粗糙75定数 与 粗糙主定数
         粗糙75定数 = [
-            math.sqrt((体力[i] * 体力[i] + 手速[i] * 手速[i] + 复合[i] * 复合[i]) / 3.0)
+            min(
+                math.sqrt((体力[i] * 体力[i] + 手速[i] * 手速[i] + 复合[i] * 复合[i]) / 3.0),
+                RAW_75_CAP,
+            )
             for i in range(n)
         ]
         粗糙主定数 = [
-            cls._calc_raw_main_constant(体力[i], 手速[i], 爆发[i], 复合[i], 节奏[i])
+            min(
+                cls._calc_raw_main_constant(体力[i], 手速[i], 爆发[i], 复合[i], 节奏[i]),
+                RAW_MAIN_CAP,
+            )
             for i in range(n)
         ]
 
@@ -652,8 +660,11 @@ class RatingPipeline:
 
         # Stage I/J: 粗糙99定数 及其全局最大值
         粗糙99定数 = [
-            cls._calc_raw_99_constant(
-                体力[i], 手速[i], 爆发[i], 复合[i], 节奏[i], 归一主定数[i]
+            min(
+                cls._calc_raw_99_constant(
+                    体力[i], 手速[i], 爆发[i], 复合[i], 节奏[i], 归一主定数[i]
+                ),
+                RAW_99_CAP,
             )
             for i in range(n)
         ]
